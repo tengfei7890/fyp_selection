@@ -15,6 +15,7 @@ import TeacherApplications from '@/pages/teacher/TeacherApplications';
 import Dashboard from '@/pages/admin/Dashboard';
 import AdminUsers from '@/pages/admin/AdminUsers';
 import AdminTopics from '@/pages/admin/AdminTopics';
+import AdminAssignments from '@/pages/admin/AdminAssignments';
 import AdminSettings from '@/pages/admin/AdminSettings';
 
 function RootRedirect() {
@@ -73,6 +74,7 @@ export default function App() {
             <Route index element={<Dashboard />} />
             <Route path="users" element={<AdminUsers />} />
             <Route path="topics" element={<AdminTopics />} />
+            <Route path="assignments" element={<AdminAssignments />} />
             <Route path="settings" element={<AdminSettings />} />
           </Route>
 

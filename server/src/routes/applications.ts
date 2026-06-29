@@ -17,6 +17,8 @@ const createSchema = z.object({
 
 // 学生：我的申请
 router.get('/mine', requireRole(Role.STUDENT), asyncHandler(applications.listMine));
+// 学生：我的最终选题结果
+router.get('/my-result', requireRole(Role.STUDENT), asyncHandler(applications.myResult));
 
 // 教师/管理员：查看某课题的申请人
 router.get('/', requireRole(Role.TEACHER, Role.ADMIN), asyncHandler(applications.listByTopic));

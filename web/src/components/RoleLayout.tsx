@@ -11,6 +11,7 @@ import {
   TeamOutlined,
   SettingOutlined,
   LogoutOutlined,
+  CheckCircleOutlined,
 } from '@ant-design/icons';
 import { Outlet, useLocation, useNavigate } from 'react-router-dom';
 import { useAuth } from '@/contexts/AuthContext';
@@ -38,6 +39,7 @@ function menuItems(role: Role): ItemType[] {
         { key: '/admin', icon: <DashboardOutlined />, label: '系统概览' },
         { key: '/admin/users', icon: <TeamOutlined />, label: '用户管理' },
         { key: '/admin/topics', icon: <BookOutlined />, label: '课题总览' },
+        { key: '/admin/assignments', icon: <CheckCircleOutlined />, label: '选题结果' },
         { key: '/admin/settings', icon: <SettingOutlined />, label: '系统设置' },
       ];
     default:

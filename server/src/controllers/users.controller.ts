@@ -1,7 +1,9 @@
 import type { Request, Response } from 'express';
+import { Prisma } from '@prisma/client';
 import { prisma } from '@/prisma';
 import { ApiError } from '@/utils/ApiError';
 import { publicUser } from '@/serializers';
+import { Role, UserStatus } from '@shared/enums';
 
 interface ProfileInput {
   studentNo: string;
@@ -58,4 +60,32 @@ export async function getById(req: Request, res: Response) {
   });
   if (!user) throw new ApiError(404, '用户不存在');
   res.json(publicUser(user));
+}
+
+/** GET /api/users/students?q= — 搜索学生（教师直接指定 / 管理员改派用） */
+export async function searchStudents(req: Request, res: Response) {
+  const q = (req.query.q as string | undefined)?.trim();
+  const where: Prisma.UserWhereInput = {
+    role: Role.STUDENT,
+    status: UserStatus.ACTIVE,
+  };
+  if (q) {
+    where.OR = [
+      { name: { contains: q } },
+      { username: { contains: q } },
+      { studentProfile: { studentNo: { contains: q } } },
+    ];
+  }
+  const users = await prisma.user.findMany({
+    where,
+    select: {
+      id: true,
+      name: true,
+      username: true,
+      studentProfile: { select: { studentNo: true, major: true, gpa: true } },
+    },
+    take: 50,
+    orderBy: { name: 'asc' },
+  });
+  res.json(users);
 }

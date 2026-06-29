@@ -8,6 +8,12 @@ export async function create(req: Request, res: Response) {
   const { topicId, message } = req.body as { topicId: number; message?: string };
   const studentId = req.user!.id;
 
+  // 抉择2：已有选题则禁止再申请
+  const myAssignment = await prisma.assignment.findUnique({
+    where: { studentId },
+  });
+  if (myAssignment) throw new ApiError(409, '你已有选题，无法再申请');
+
   const topic = await prisma.topic.findUnique({ where: { id: topicId } });
   if (!topic) throw new ApiError(404, '课题不存在');
   if (!([TopicStatus.OPEN, TopicStatus.SELECTING] as TopicStatus[]).includes(topic.status)) {
@@ -89,4 +95,17 @@ export async function withdraw(req: Request, res: Response) {
     data: { status: ApplicationStatus.WITHDRAWN },
   });
   res.json(updated);
+}
+
+/** GET /api/applications/my-result — 学生的最终选题结果（无则返回 null） */
+export async function myResult(req: Request, res: Response) {
+  const assignment = await prisma.assignment.findUnique({
+    where: { studentId: req.user!.id },
+    include: {
+      topic: {
+        include: { teacher: { select: { id: true, name: true } } },
+      },
+    },
+  });
+  res.json(assignment);
 }

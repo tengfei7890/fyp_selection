@@ -3,8 +3,10 @@ import type {
   User,
   Topic,
   Application,
+  Assignment,
   Favorite,
   Skill,
+  StudentSearchItem,
   SystemSettings,
   AdminStats,
   Paginated,
@@ -21,6 +23,12 @@ export interface TopicInput {
   academicYear?: string | null;
   status?: TopicStatus;
   skillIds?: number[];
+}
+
+export interface RangeCriteria {
+  gpaMin?: number | null;
+  majors?: string[];
+  candidateStudentIds?: number[];
 }
 
 export interface ProfileInput {
@@ -58,6 +66,19 @@ export const topicApi = {
   updateStatus: (id: number, status: TopicStatus) =>
     patch<Topic>(`/topics/${id}/status`, { status }),
   remove: (id: number) => del<{ success: boolean }>(`/topics/${id}`),
+  // 选题执行
+  select: (id: number, criteria?: RangeCriteria) =>
+    post<{ assigned: number; totalAssigned?: number }>(`/topics/${id}/select`, {
+      criteria,
+    }),
+  assignDirect: (id: number, studentIds: number[]) =>
+    post<{ assigned: number; skipped: number }>(`/topics/${id}/assign-direct`, {
+      studentIds,
+    }),
+  clearAssignments: (id: number) =>
+    del<{ cleared: number }>(`/topics/${id}/assignments`),
+  assignments: (id: number) =>
+    get<Assignment[]>(`/topics/${id}/assignments`),
 };
 
 /* ------------------------------ Skills ----------------------------- */
@@ -75,6 +96,9 @@ export const applicationApi = {
   byTopic: (topicId: number) =>
     get<Application[]>('/applications', { topicId }),
   withdraw: (id: number) => patch<Application>(`/applications/${id}/withdraw`),
+  accept: (id: number) => post<{ success: boolean }>(`/applications/${id}/accept`),
+  reject: (id: number) => post<{ success: boolean }>(`/applications/${id}/reject`),
+  myResult: () => get<Assignment | null>('/applications/my-result'),
 };
 
 /* ----------------------------- Favorites --------------------------- */
@@ -90,6 +114,8 @@ export const favoriteApi = {
 export const userApi = {
   updateProfile: (data: ProfileInput) => put<User>('/users/profile', data),
   get: (id: number) => get<User>(`/users/${id}`),
+  searchStudents: (q?: string) =>
+    get<StudentSearchItem[]>('/users/students', { q }),
 };
 
 /* ------------------------------- Admin ----------------------------- */
@@ -106,4 +132,18 @@ export const adminApi = {
   getSettings: () => get<SystemSettings>('/admin/settings'),
   updateSettings: (data: { isLocked?: boolean; phase?: string }) =>
     put<SystemSettings>('/admin/settings', data),
+  // 选题结果管理
+  assignments: {
+    list: (params: ListParams) =>
+      get<Paginated<Assignment>>('/admin/assignments', params),
+    create: (data: {
+      studentId: number;
+      topicId: number;
+      method?: string;
+      note?: string;
+    }) => post<Assignment>('/admin/assignments', data),
+    update: (id: number, data: { topicId?: number; note?: string | null }) =>
+      put<Assignment>(`/admin/assignments/${id}`, data),
+    remove: (id: number) => del<{ success: boolean }>(`/admin/assignments/${id}`),
+  },
 };

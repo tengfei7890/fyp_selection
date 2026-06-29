@@ -28,6 +28,11 @@ router.put(
 
 // 教师/管理员：查看用户公开档案
 router.get(
+  '/students',
+  requireRole(Role.TEACHER, Role.ADMIN),
+  asyncHandler(users.searchStudents),
+);
+router.get(
   '/:id',
   requireRole(Role.TEACHER, Role.ADMIN),
   asyncHandler(users.getById),

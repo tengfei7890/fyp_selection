@@ -78,6 +78,32 @@ export interface Favorite {
   topic: Topic;
 }
 
+/** 最终选题结果（定稿） */
+export interface Assignment {
+  id: number;
+  studentId: number;
+  topicId: number;
+  method: SelectionMode;
+  assignedBy: number;
+  locked: boolean;
+  note?: string | null;
+  createdAt: string;
+  student?: { id: number; name: string; username: string };
+  topic?: { id: number; title: string; teacher?: { name: string } };
+}
+
+/** 学生搜索结果项（直接指定 / 改派用） */
+export interface StudentSearchItem {
+  id: number;
+  name: string;
+  username: string;
+  studentProfile?: {
+    studentNo: string;
+    major: string;
+    gpa?: number | null;
+  } | null;
+}
+
 export interface SystemSettings {
   id: number;
   isLocked: boolean;

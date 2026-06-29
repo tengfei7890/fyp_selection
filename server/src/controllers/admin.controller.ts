@@ -5,7 +5,8 @@ import { paginate } from '@/utils/pagination';
 import { hashPassword } from '@/utils/password';
 import { ApiError } from '@/utils/ApiError';
 import { publicUser } from '@/serializers';
-import { Role, TopicStatus, UserStatus } from '@shared/enums';
+import * as engine from '@/selection/engine';
+import { Role, SelectionMode, TopicStatus, UserStatus } from '@shared/enums';
 
 /* ----------------------------- 用户管理 ----------------------------- */
 
@@ -169,6 +170,79 @@ export async function updateSettings(req: Request, res: Response) {
     create: { id: 1, isLocked: isLocked ?? false, phase: (phase as never) ?? undefined },
   });
   res.json(settings);
+}
+
+/* --------------------------- 选题结果管理 --------------------------- */
+
+/** GET /api/admin/assignments — 全部选题结果 */
+export async function listAssignments(req: Request, res: Response) {
+  const { page, pageSize, skip, take } = paginate(req);
+  const [items, total] = await Promise.all([
+    prisma.assignment.findMany({
+      include: {
+        student: { select: { id: true, name: true, username: true } },
+        topic: {
+          select: {
+            id: true,
+            title: true,
+            teacher: { select: { name: true } },
+          },
+        },
+      },
+      skip,
+      take,
+      orderBy: { createdAt: 'desc' },
+    }),
+    prisma.assignment.count(),
+  ]);
+  res.json({ items, total, page, pageSize });
+}
+
+/** POST /api/admin/assignments — 管理员手动分配（锁定后亦可） */
+export async function createAssignment(req: Request, res: Response) {
+  const { studentId, topicId, method, note } = req.body as {
+    studentId: number;
+    topicId: number;
+    method?: SelectionMode;
+    note?: string;
+  };
+  await prisma.$transaction(async (tx) => {
+    await engine.assignStudent(tx, {
+      studentId,
+      topicId,
+      method: method ?? SelectionMode.DIRECT,
+      assignedBy: req.user!.id,
+      note,
+    });
+  });
+  const created = await prisma.assignment.findUnique({
+    where: { studentId },
+    include: {
+      student: { select: { id: true, name: true, username: true } },
+      topic: { select: { id: true, title: true } },
+    },
+  });
+  res.status(201).json(created);
+}
+
+/** PUT /api/admin/assignments/:id — 改派（换课题）/ 改备注 */
+export async function updateAssignment(req: Request, res: Response) {
+  const id = parseInt(req.params.id, 10);
+  const { topicId, note } = req.body as { topicId?: number; note?: string };
+
+  const data: Prisma.AssignmentUpdateInput = {};
+  if (topicId !== undefined) data.topic = { connect: { id: topicId } };
+  if (note !== undefined) data.note = note;
+
+  const updated = await prisma.assignment.update({ where: { id }, data });
+  res.json(updated);
+}
+
+/** DELETE /api/admin/assignments/:id — 取消分配 */
+export async function deleteAssignment(req: Request, res: Response) {
+  const id = parseInt(req.params.id, 10);
+  await prisma.assignment.delete({ where: { id } });
+  res.json({ success: true });
 }
 
 interface CreateUserInput {

@@ -4,7 +4,7 @@ import { authenticate, requireRole } from '@/middleware/auth';
 import { validateBody } from '@/middleware/validate';
 import { asyncHandler } from '@/utils/ApiError';
 import * as admin from '@/controllers/admin.controller';
-import { Role, SystemPhase, UserStatus } from '@shared/enums';
+import { Role, SelectionMode, SystemPhase, UserStatus } from '@shared/enums';
 
 const router = Router();
 router.use(authenticate, requireRole(Role.ADMIN));
@@ -53,5 +53,37 @@ router.get('/topics', asyncHandler(admin.listTopics));
 
 router.get('/settings', asyncHandler(admin.getSettings));
 router.put('/settings', validateBody(settingsSchema), asyncHandler(admin.updateSettings));
+
+// 选题结果管理（锁定后亦可）
+const createAssignmentSchema = z.object({
+  studentId: z.number().int().positive(),
+  topicId: z.number().int().positive(),
+  method: z
+    .enum([
+      SelectionMode.DIRECT,
+      SelectionMode.MUTUAL,
+      SelectionMode.RANDOM,
+      SelectionMode.RANGE_RANDOM,
+    ])
+    .optional(),
+  note: z.string().max(500).optional(),
+});
+const updateAssignmentSchema = z.object({
+  topicId: z.number().int().positive().optional(),
+  note: z.string().max(500).nullable().optional(),
+});
+
+router.get('/assignments', asyncHandler(admin.listAssignments));
+router.post(
+  '/assignments',
+  validateBody(createAssignmentSchema),
+  asyncHandler(admin.createAssignment),
+);
+router.put(
+  '/assignments/:id',
+  validateBody(updateAssignmentSchema),
+  asyncHandler(admin.updateAssignment),
+);
+router.delete('/assignments/:id', asyncHandler(admin.deleteAssignment));
 
 export default router;
