@@ -1,0 +1,221 @@
+// 毕业设计选题系统 - 数据模型
+// 枚举的字符串值与 shared/enums.ts 保持一致，前后端可直接复用。
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "mysql"
+  url      = env("DATABASE_URL")
+}
+
+enum Role {
+  ADMIN
+  TEACHER
+  STUDENT
+}
+
+enum UserStatus {
+  ACTIVE
+  DISABLED
+}
+
+/// 选题模式：四种模式最终都产出 Assignment 记录
+enum SelectionMode {
+  DIRECT       // 教师直接指定
+  MUTUAL       // 双向互选
+  RANDOM       // 随机选择
+  RANGE_RANDOM // 范围随机
+}
+
+enum TopicStatus {
+  DRAFT
+  OPEN
+  SELECTING
+  CLOSED
+  LOCKED
+}
+
+enum ApplicationStatus {
+  PENDING
+  ACCEPTED
+  REJECTED
+  WITHDRAWN
+}
+
+/// 系统阶段（管理员维护）
+enum SystemPhase {
+  REGISTRATION
+  BROWSING
+  SELECTION
+  LOCKED
+}
+
+model User {
+  id           Int        @id @default(autoincrement())
+  username     String     @unique @db.VarChar(64)
+  passwordHash String     @map("password_hash")
+  role         Role       @default(STUDENT)
+  name         String     @db.VarChar(64)
+  email        String?    @db.VarChar(191)
+  phone        String?    @db.VarChar(32)
+  status       UserStatus @default(ACTIVE)
+  createdAt    DateTime   @default(now()) @map("created_at")
+  updatedAt    DateTime   @updatedAt @map("updated_at")
+
+  studentProfile   StudentProfile?
+  topicsAsTeacher  Topic[]   @relation("TopicTeacher")
+  applications     Application[]
+  favorites        Favorite[]
+  assignments      Assignment[]
+  messagesSent     Message[] @relation("MessageSender")
+  messagesReceived Message[] @relation("MessageReceiver")
+
+  @@map("users")
+}
+
+model StudentProfile {
+  userId    Int      @id @map("user_id")
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  studentNo String   @unique @map("student_no") @db.VarChar(32)
+  major     String   @db.VarChar(64)
+  gpa       Float?
+  grade     String?  @db.VarChar(16)
+  bio       String?  @db.Text
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  skills StudentSkill[]
+
+  @@map("student_profiles")
+}
+
+model Skill {
+  id       Int     @id @default(autoincrement())
+  name     String  @unique @db.VarChar(64)
+  category String? @db.VarChar(64)
+
+  students StudentSkill[]
+  topics   TopicSkillRequirement[]
+
+  @@map("skills")
+}
+
+model StudentSkill {
+  studentId Int     @map("student_id")
+  skillId   Int     @map("skill_id")
+  level     String? @db.VarChar(16)
+
+  student StudentProfile @relation(fields: [studentId], references: [userId], onDelete: Cascade)
+  skill   Skill          @relation(fields: [skillId], references: [id], onDelete: Cascade)
+
+  @@id([studentId, skillId])
+  @@map("student_skills")
+}
+
+model Topic {
+  id               Int           @id @default(autoincrement())
+  teacherId        Int           @map("teacher_id")
+  teacher          User          @relation("TopicTeacher", fields: [teacherId], references: [id])
+  title            String        @db.VarChar(191)
+  description      String        @db.Text
+  gpaThreshold     Float?        @map("gpa_threshold")
+  majorRestriction String?       @map("major_restriction") @db.VarChar(191)
+  capacity         Int           @default(1)
+  selectionMode    SelectionMode @default(MUTUAL) @map("selection_mode")
+  status           TopicStatus   @default(DRAFT)
+  academicYear     String?       @map("academic_year") @db.VarChar(16)
+  createdAt        DateTime      @default(now()) @map("created_at")
+  updatedAt        DateTime      @updatedAt @map("updated_at")
+
+  requirements TopicSkillRequirement[]
+  applications Application[]
+  favorites    Favorite[]
+  assignments  Assignment[]
+
+  @@index([teacherId])
+  @@index([status])
+  @@map("topics")
+}
+
+model TopicSkillRequirement {
+  topicId Int @map("topic_id")
+  skillId Int @map("skill_id")
+
+  topic Topic @relation(fields: [topicId], references: [id], onDelete: Cascade)
+  skill Skill @relation(fields: [skillId], references: [id], onDelete: Cascade)
+
+  @@id([topicId, skillId])
+  @@map("topic_skill_requirements")
+}
+
+model Application {
+  id        Int               @id @default(autoincrement())
+  studentId Int               @map("student_id")
+  topicId   Int               @map("topic_id")
+  status    ApplicationStatus @default(PENDING)
+  message   String?           @db.Text
+  createdAt DateTime          @default(now()) @map("created_at")
+  updatedAt DateTime          @updatedAt @map("updated_at")
+
+  student User  @relation(fields: [studentId], references: [id], onDelete: Cascade)
+  topic   Topic @relation(fields: [topicId], references: [id], onDelete: Cascade)
+
+  @@unique([studentId, topicId])
+  @@index([topicId])
+  @@map("applications")
+}
+
+model Favorite {
+  studentId Int      @map("student_id")
+  topicId   Int      @map("topic_id")
+  createdAt DateTime @default(now()) @map("created_at")
+
+  student User  @relation(fields: [studentId], references: [id], onDelete: Cascade)
+  topic   Topic @relation(fields: [topicId], references: [id], onDelete: Cascade)
+
+  @@id([studentId, topicId])
+  @@map("favorites")
+}
+
+/// 最终选题结果（定稿）。studentId 唯一 = 一人一题。
+model Assignment {
+  id         Int           @id @default(autoincrement())
+  studentId  Int           @unique @map("student_id")
+  topicId    Int           @map("topic_id")
+  method     SelectionMode @map("method")
+  assignedBy Int           @map("assigned_by") // userId；0 表示系统自动
+  locked     Boolean       @default(false)
+  note       String?       @db.Text
+  createdAt  DateTime      @default(now()) @map("created_at")
+
+  student User  @relation(fields: [studentId], references: [id], onDelete: Cascade)
+  topic   Topic @relation(fields: [topicId], references: [id], onDelete: Cascade)
+
+  @@map("assignments")
+}
+
+model Message {
+  id         Int       @id @default(autoincrement())
+  senderId   Int       @map("sender_id")
+  receiverId Int       @map("receiver_id")
+  topicId    Int?      @map("topic_id") // 可选：关联课题上下文（纯标量，不强约束）
+  content    String    @db.Text
+  readAt     DateTime? @map("read_at")
+  createdAt  DateTime  @default(now()) @map("created_at")
+
+  sender   User @relation("MessageSender", fields: [senderId], references: [id], onDelete: Cascade)
+  receiver User @relation("MessageReceiver", fields: [receiverId], references: [id], onDelete: Cascade)
+
+  @@index([receiverId, readAt])
+  @@map("messages")
+}
+
+model SystemSetting {
+  id        Int          @id @default(1)
+  isLocked  Boolean      @default(false) @map("is_locked")
+  phase     SystemPhase  @default(REGISTRATION)
+  updatedAt DateTime     @updatedAt @map("updated_at")
+
+  @@map("system_settings")
+}
