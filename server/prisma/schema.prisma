@@ -154,6 +154,8 @@ model Application {
   studentId Int               @map("student_id")
   topicId   Int               @map("topic_id")
   status    ApplicationStatus @default(PENDING)
+  // 拒绝原因：cascade=因"一人一题"被级联拒绝；manual=教师手动拒绝
+  rejectReason String?        @map("reject_reason") @db.VarChar(32)
   message   String?           @db.Text
   createdAt DateTime          @default(now()) @map("created_at")
   updatedAt DateTime          @updatedAt @map("updated_at")

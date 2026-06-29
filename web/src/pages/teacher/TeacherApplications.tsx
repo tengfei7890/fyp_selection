@@ -280,10 +280,13 @@ export default function TeacherApplications() {
                     width: 120,
                     render: (_: unknown, a: Application) => {
                       if (a.status === ApplicationStatus.REJECTED) {
-                        const otherTopic = a.student?.assignments?.[0]?.topic?.title;
-                        if (otherTopic) {
+                        if (a.rejectReason === 'cascade') {
+                          const otherTopic = a.student?.assignments?.[0]?.topic?.title;
                           return (
-                            <Tag color="orange" title={`该生已确定：${otherTopic}`}>
+                            <Tag
+                              color="orange"
+                              title={otherTopic ? `该生已确定：${otherTopic}` : undefined}
+                            >
                               已选其他课题
                             </Tag>
                           );

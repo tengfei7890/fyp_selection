@@ -45,10 +45,10 @@ export async function assignStudent(tx: Tx, params: AssignParams): Promise<void>
     data: { studentId, topicId, method, assignedBy, note },
   });
 
-  // 级联：本课题申请→ACCEPTED，其他课题 PENDING 申请→REJECTED
+  // 级联：本课题申请→ACCEPTED，其他课题 PENDING 申请→REJECTED(cascade)
   await tx.application.updateMany({
     where: { studentId, topicId, status: ApplicationStatus.PENDING },
-    data: { status: ApplicationStatus.ACCEPTED },
+    data: { status: ApplicationStatus.ACCEPTED, rejectReason: null },
   });
   await tx.application.updateMany({
     where: {
@@ -56,7 +56,7 @@ export async function assignStudent(tx: Tx, params: AssignParams): Promise<void>
       status: ApplicationStatus.PENDING,
       topicId: { not: topicId },
     },
-    data: { status: ApplicationStatus.REJECTED },
+    data: { status: ApplicationStatus.REJECTED, rejectReason: 'cascade' },
   });
 }
 
@@ -260,15 +260,41 @@ export async function mutualReject(applicationId: number) {
   }
   await prisma.application.update({
     where: { id: applicationId },
-    data: { status: ApplicationStatus.REJECTED },
+    data: { status: ApplicationStatus.REJECTED, rejectReason: 'manual' },
   });
   return { success: true };
 }
 
-/** 清空某课题全部选题结果（重选）。 */
+/** 清空某课题全部选题结果（重选），并回滚相关申请状态。 */
 export async function clearTopicAssignments(topicId: number) {
   return prisma.$transaction(async (tx) => {
+    // 先记录被释放的学生（一人一题，清空后他们将不再有选题）
+    const freed = await tx.assignment.findMany({
+      where: { topicId },
+      select: { studentId: true },
+    });
+    const freedIds = freed.map((a) => a.studentId);
+
     const result = await tx.assignment.deleteMany({ where: { topicId } });
+
+    // 回滚：本课题因被选中而 ACCEPTED 的申请 → PENDING，便于重新处理
+    await tx.application.updateMany({
+      where: { topicId, status: ApplicationStatus.ACCEPTED },
+      data: { status: ApplicationStatus.PENDING, rejectReason: null },
+    });
+
+    // 回滚：被释放学生因级联而 REJECTED(cascade) 的其他课题申请 → PENDING
+    if (freedIds.length) {
+      await tx.application.updateMany({
+        where: {
+          studentId: { in: freedIds },
+          status: ApplicationStatus.REJECTED,
+          rejectReason: 'cascade',
+        },
+        data: { status: ApplicationStatus.PENDING, rejectReason: null },
+      });
+    }
+
     const topic = await tx.topic.findUnique({ where: { id: topicId } });
     // 清空后若曾为非开放状态，恢复 OPEN 以便重新选题
     if (
@@ -282,7 +308,6 @@ export async function clearTopicAssignments(topicId: number) {
         data: { status: TopicStatus.OPEN },
       });
     }
-    // 注：清空不会自动恢复此前被级联拒绝的其他课题申请，需由教师/管理员另行处理。
     return { cleared: result.count };
   });
 }

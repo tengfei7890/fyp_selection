@@ -92,11 +92,17 @@ export default function MyApplications() {
               title: '状态',
               render: (_: unknown, r: Application) => {
                 if (r.status === ApplicationStatus.REJECTED) {
-                  return result ? (
-                    <Tag color="orange">已选其他课题</Tag>
-                  ) : (
-                    <Tag color="red">教师拒绝</Tag>
-                  );
+                  if (r.rejectReason === 'cascade') {
+                    return (
+                      <Tag
+                        color="orange"
+                        title={result?.topic?.title ? `你已确定：${result.topic.title}` : undefined}
+                      >
+                        已选其他课题
+                      </Tag>
+                    );
+                  }
+                  return <Tag color="red">教师拒绝</Tag>;
                 }
                 return <ApplicationStatusTag status={r.status} />;
               },

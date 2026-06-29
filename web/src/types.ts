@@ -66,6 +66,8 @@ export interface Application {
   studentId: number;
   topicId: number;
   status: ApplicationStatus;
+  /** 拒绝原因：cascade=一人一题级联拒绝；manual=教师手动拒绝 */
+  rejectReason?: 'cascade' | 'manual' | null;
   message?: string | null;
   createdAt: string;
   updatedAt?: string;
