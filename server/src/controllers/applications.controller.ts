@@ -73,6 +73,10 @@ export async function listByTopic(req: Request, res: Response) {
               skills: { include: { skill: { select: { name: true } } } },
             },
           },
+          // 该生当前选题（一人一题，最多 1 条），用于解释"已拒绝"原因
+          assignments: {
+            select: { topicId: true, topic: { select: { title: true } } },
+          },
         },
       },
     },

@@ -10,7 +10,15 @@ import { UserStatus } from '@shared/enums';
 export async function login(req: Request, res: Response) {
   const { username, password } = req.body as { username: string; password: string };
 
-  const user = await prisma.user.findUnique({ where: { username } });
+  // 含学生档案：登录后前端可直接拿到 profile，避免 MyProfile 表单预填为空
+  const user = await prisma.user.findUnique({
+    where: { username },
+    include: {
+      studentProfile: {
+        include: { skills: { include: { skill: true } } },
+      },
+    },
+  });
   if (!user || user.status !== UserStatus.ACTIVE) {
     throw new ApiError(401, '账号不存在或已被禁用');
   }

@@ -39,6 +39,8 @@ export interface User {
   phone?: string | null;
   status?: UserStatus;
   studentProfile?: StudentProfile | null;
+  /** 该生当前选题（教师查看申请人时附带，用于解释"已拒绝"原因） */
+  assignments?: { topicId: number; topic?: { title?: string } }[];
 }
 
 export interface Topic {

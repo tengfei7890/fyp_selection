@@ -277,9 +277,21 @@ export default function TeacherApplications() {
                   { title: '留言', dataIndex: 'message', ellipsis: true, render: (m: string) => m || '-' },
                   {
                     title: '状态',
-                    dataIndex: 'status',
-                    width: 90,
-                    render: (s: Application['status']) => <ApplicationStatusTag status={s} />,
+                    width: 120,
+                    render: (_: unknown, a: Application) => {
+                      if (a.status === ApplicationStatus.REJECTED) {
+                        const otherTopic = a.student?.assignments?.[0]?.topic?.title;
+                        if (otherTopic) {
+                          return (
+                            <Tag color="orange" title={`该生已确定：${otherTopic}`}>
+                              已选其他课题
+                            </Tag>
+                          );
+                        }
+                        return <Tag color="red">教师拒绝</Tag>;
+                      }
+                      return <ApplicationStatusTag status={a.status} />;
+                    },
                   },
                   {
                     title: '操作',

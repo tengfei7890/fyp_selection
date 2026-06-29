@@ -90,8 +90,16 @@ export default function MyApplications() {
             { title: '申请时间', dataIndex: 'createdAt', render: (t: string) => new Date(t).toLocaleString() },
             {
               title: '状态',
-              dataIndex: 'status',
-              render: (s: Application['status']) => <ApplicationStatusTag status={s} />,
+              render: (_: unknown, r: Application) => {
+                if (r.status === ApplicationStatus.REJECTED) {
+                  return result ? (
+                    <Tag color="orange">已选其他课题</Tag>
+                  ) : (
+                    <Tag color="red">教师拒绝</Tag>
+                  );
+                }
+                return <ApplicationStatusTag status={r.status} />;
+              },
             },
             {
               title: '操作',
