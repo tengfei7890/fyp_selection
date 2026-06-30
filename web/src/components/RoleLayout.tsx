@@ -1,5 +1,5 @@
-import { useMemo } from 'react';
-import { Layout, Menu, Button, Typography, Space, Tag } from 'antd';
+import { useEffect, useMemo, useState } from 'react';
+import { Layout, Menu, Button, Typography, Space, Tag, Badge } from 'antd';
 import {
   SearchOutlined,
   StarOutlined,
@@ -12,27 +12,39 @@ import {
   SettingOutlined,
   LogoutOutlined,
   CheckCircleOutlined,
+  MessageOutlined,
 } from '@ant-design/icons';
 import { Outlet, useLocation, useNavigate } from 'react-router-dom';
 import { useAuth } from '@/contexts/AuthContext';
+import { messageApi } from '@/api';
 import { Role, RoleLabels } from '@shared/enums';
 import type { ItemType } from 'antd/es/menu/interface';
 
 const { Header, Sider, Content } = Layout;
 
-function menuItems(role: Role): ItemType[] {
+function msgLabel(unread: number) {
+  return (
+    <Badge count={unread} size="small" offset={[8, 0]}>
+      <span>消息</span>
+    </Badge>
+  );
+}
+
+function menuItems(role: Role, unread: number): ItemType[] {
   switch (role) {
     case Role.STUDENT:
       return [
         { key: '/student', icon: <SearchOutlined />, label: '浏览课题' },
         { key: '/student/favorites', icon: <StarOutlined />, label: '我的收藏' },
         { key: '/student/applications', icon: <FileTextOutlined />, label: '我的申请' },
+        { key: '/student/messages', icon: <MessageOutlined />, label: msgLabel(unread) },
         { key: '/student/profile', icon: <UserOutlined />, label: '个人档案' },
       ];
     case Role.TEACHER:
       return [
         { key: '/teacher', icon: <BookOutlined />, label: '我的课题' },
         { key: '/teacher/applications', icon: <SolutionOutlined />, label: '申请管理' },
+        { key: '/teacher/messages', icon: <MessageOutlined />, label: msgLabel(unread) },
       ];
     case Role.ADMIN:
       return [
@@ -51,8 +63,19 @@ export default function RoleLayout() {
   const { user, logout } = useAuth();
   const navigate = useNavigate();
   const location = useLocation();
+  const [unread, setUnread] = useState(0);
 
-  const items = useMemo(() => menuItems(user!.role), [user!.role]);
+  // 教师/学生：每 30s 轮询未读数（管理员无站内信）
+  const canMsg = user?.role === Role.TEACHER || user?.role === Role.STUDENT;
+  useEffect(() => {
+    if (!canMsg) return;
+    const tick = () => messageApi.unreadCount().then((r) => setUnread(r.count)).catch(() => undefined);
+    tick();
+    const id = setInterval(tick, 30000);
+    return () => clearInterval(id);
+  }, [canMsg]);
+
+  const items = useMemo(() => menuItems(user!.role, unread), [user!.role, unread]);
 
   // 选中态：取当前路径中与菜单 key 的最长前缀匹配
   const selectedKey =

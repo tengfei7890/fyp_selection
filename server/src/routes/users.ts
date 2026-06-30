@@ -32,6 +32,12 @@ router.get(
   requireRole(Role.TEACHER, Role.ADMIN),
   asyncHandler(users.searchStudents),
 );
+// 学生/教师：搜索收件人（学生搜教师、教师搜学生，用于站内信）
+router.get(
+  '/teachers',
+  requireRole(Role.STUDENT, Role.TEACHER),
+  asyncHandler(users.searchTeachers),
+);
 router.get(
   '/:id',
   requireRole(Role.TEACHER, Role.ADMIN),

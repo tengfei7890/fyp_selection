@@ -13,7 +13,7 @@ import {
   Spin,
   Result,
 } from 'antd';
-import { StarFilled, StarOutlined, ArrowLeftOutlined } from '@ant-design/icons';
+import { StarFilled, StarOutlined, ArrowLeftOutlined, MessageOutlined } from '@ant-design/icons';
 import { topicApi, favoriteApi, applicationApi } from '@/api';
 import type { Topic, Application, Favorite } from '@/types';
 import {
@@ -126,6 +126,16 @@ export default function TopicDetail() {
               onClick={() => setApplyOpen(true)}
             >
               {myApp ? `已申请（${myApp.status === 'PENDING' ? '待处理' : myApp.status}）` : '申请该课题'}
+            </Button>
+            <Button
+              icon={<MessageOutlined />}
+              onClick={() =>
+                navigate(
+                  `/student/messages?partnerId=${topic.teacherId}&partnerName=${encodeURIComponent(topic.teacher?.name ?? '')}&topicId=${topic.id}`,
+                )
+              }
+            >
+              联系教师
             </Button>
           </Space>
         }

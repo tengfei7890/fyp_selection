@@ -12,6 +12,7 @@ import MyApplications from '@/pages/student/MyApplications';
 import MyProfile from '@/pages/student/MyProfile';
 import MyTopics from '@/pages/teacher/MyTopics';
 import TeacherApplications from '@/pages/teacher/TeacherApplications';
+import Messages from '@/pages/Messages';
 import Dashboard from '@/pages/admin/Dashboard';
 import AdminUsers from '@/pages/admin/AdminUsers';
 import AdminTopics from '@/pages/admin/AdminTopics';
@@ -46,6 +47,7 @@ export default function App() {
             <Route path="topics/:id" element={<TopicDetail />} />
             <Route path="favorites" element={<Favorites />} />
             <Route path="applications" element={<MyApplications />} />
+            <Route path="messages" element={<Messages />} />
             <Route path="profile" element={<MyProfile />} />
           </Route>
 
@@ -60,6 +62,7 @@ export default function App() {
           >
             <Route index element={<MyTopics />} />
             <Route path="applications" element={<TeacherApplications />} />
+            <Route path="messages" element={<Messages />} />
           </Route>
 
           {/* 管理员 */}

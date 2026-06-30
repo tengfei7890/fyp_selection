@@ -108,6 +108,26 @@ export interface StudentSearchItem {
   } | null;
 }
 
+/** 站内信消息 */
+export interface MessageItem {
+  id: number;
+  senderId: number;
+  receiverId: number;
+  topicId?: number | null;
+  content: string;
+  readAt?: string | null;
+  createdAt: string;
+  topic?: { id: number; title: string | null } | null;
+  receiver?: { id: number; name: string; role: Role };
+}
+
+/** 会话（按用户对） */
+export interface Conversation {
+  partner: { id: number; name: string; role: Role };
+  lastMessage: { content: string; createdAt: string; senderId: number } | null;
+  unread: number;
+}
+
 export interface SystemSettings {
   id: number;
   isLocked: boolean;

@@ -11,6 +11,7 @@ import favoriteRoutes from '@/routes/favorites';
 import userRoutes from '@/routes/users';
 import adminRoutes from '@/routes/admin';
 import selectionRoutes from '@/routes/selection';
+import messageRoutes from '@/routes/messages';
 
 const app = express();
 
@@ -27,6 +28,7 @@ app.use('/api/favorites', favoriteRoutes);
 app.use('/api/users', userRoutes);
 app.use('/api/admin', adminRoutes);
 app.use('/api', selectionRoutes);
+app.use('/api/messages', messageRoutes);
 
 app.use(notFound);
 app.use(errorHandler);

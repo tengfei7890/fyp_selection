@@ -7,6 +7,8 @@ import type {
   Favorite,
   Skill,
   StudentSearchItem,
+  Conversation,
+  MessageItem,
   SystemSettings,
   AdminStats,
   Paginated,
@@ -116,6 +118,8 @@ export const userApi = {
   get: (id: number) => get<User>(`/users/${id}`),
   searchStudents: (q?: string) =>
     get<StudentSearchItem[]>('/users/students', { q }),
+  searchTeachers: (q?: string) =>
+    get<{ id: number; name: string; username: string }[]>('/users/teachers', { q }),
 };
 
 /* ------------------------------- Admin ----------------------------- */
@@ -146,4 +150,15 @@ export const adminApi = {
       put<Assignment>(`/admin/assignments/${id}`, data),
     remove: (id: number) => del<{ success: boolean }>(`/admin/assignments/${id}`),
   },
+};
+
+/* ----------------------------- Messages ---------------------------- */
+// 站内信（仅教师↔学生）。轮询方式；后续可升级为 WebSocket 推送。
+export const messageApi = {
+  conversations: () => get<Conversation[]>('/messages/conversations'),
+  thread: (partnerId: number, topicId?: number) =>
+    get<MessageItem[]>(`/messages/with/${partnerId}`, topicId ? { topicId } : undefined),
+  send: (data: { receiverId: number; content: string; topicId?: number }) =>
+    post<MessageItem>('/messages', data),
+  unreadCount: () => get<{ count: number }>('/messages/unread-count'),
 };

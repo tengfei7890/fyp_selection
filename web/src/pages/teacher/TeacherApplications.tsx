@@ -14,7 +14,7 @@ import {
   Descriptions,
   message,
 } from 'antd';
-import { useSearchParams } from 'react-router-dom';
+import { useSearchParams, useNavigate } from 'react-router-dom';
 import { topicApi, applicationApi, type RangeCriteria } from '@/api';
 import type {
   Topic,
@@ -23,6 +23,7 @@ import type {
   StudentSearchItem,
   Paginated,
 } from '@/types';
+import { MessageOutlined } from '@ant-design/icons';
 import StudentPickerModal from '@/components/StudentPickerModal';
 import {
   TopicStatusTag,
@@ -33,6 +34,7 @@ import { SelectionMode, ApplicationStatus } from '@shared/enums';
 
 export default function TeacherApplications() {
   const [searchParams] = useSearchParams();
+  const navigate = useNavigate();
   const urlTopicId = searchParams.get('topicId');
 
   const [topics, setTopics] = useState<Topic[]>([]);
@@ -298,20 +300,33 @@ export default function TeacherApplications() {
                   },
                   {
                     title: '操作',
-                    width: 150,
-                    render: (_: unknown, a: Application) =>
-                      a.status === ApplicationStatus.PENDING ? (
-                        <Space size="small">
-                          <Button size="small" type="primary" loading={busy} onClick={() => accept(a.id)}>
-                            通过
-                          </Button>
-                          <Button size="small" danger loading={busy} onClick={() => reject(a.id)}>
-                            拒绝
-                          </Button>
-                        </Space>
-                      ) : (
-                        <span style={{ color: '#aaa' }}>—</span>
-                      ),
+                    width: 190,
+                    render: (_: unknown, a: Application) => (
+                      <Space size="small" wrap>
+                        {a.status === ApplicationStatus.PENDING && (
+                          <>
+                            <Button size="small" type="primary" loading={busy} onClick={() => accept(a.id)}>
+                              通过
+                            </Button>
+                            <Button size="small" danger loading={busy} onClick={() => reject(a.id)}>
+                              拒绝
+                            </Button>
+                          </>
+                        )}
+                        <Button
+                          size="small"
+                          type="link"
+                          icon={<MessageOutlined />}
+                          onClick={() =>
+                            navigate(
+                              `/teacher/messages?partnerId=${a.studentId}&partnerName=${encodeURIComponent(a.student?.name ?? '')}&topicId=${topicId}`,
+                            )
+                          }
+                        >
+                          联系
+                        </Button>
+                      </Space>
+                    ),
                   },
                 ]}
               />

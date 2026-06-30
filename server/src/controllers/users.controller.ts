@@ -89,3 +89,22 @@ export async function searchStudents(req: Request, res: Response) {
   });
   res.json(users);
 }
+
+/** GET /api/users/teachers?q= — 搜索教师（学生发起站内信收件人） */
+export async function searchTeachers(req: Request, res: Response) {
+  const q = (req.query.q as string | undefined)?.trim();
+  const where: Prisma.UserWhereInput = {
+    role: Role.TEACHER,
+    status: UserStatus.ACTIVE,
+  };
+  if (q) {
+    where.OR = [{ name: { contains: q } }, { username: { contains: q } }];
+  }
+  const users = await prisma.user.findMany({
+    where,
+    select: { id: true, name: true, username: true },
+    take: 50,
+    orderBy: { name: 'asc' },
+  });
+  res.json(users);
+}
