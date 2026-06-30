@@ -135,3 +135,28 @@ export async function unreadCount(req: Request, res: Response) {
   const count = await prisma.message.count({ where: { receiverId: me, readAt: null } });
   res.json({ count });
 }
+
+/** GET /api/messages/topics-with/:partnerId — 该师生对相关联的课题（学生已申请、且属于该教师） */
+export async function contextTopics(req: Request, res: Response) {
+  const me = req.user!.id;
+  const partnerId = parseInt(req.params.partnerId, 10);
+  await assertCanMessage(me, partnerId);
+
+  const meIsStudent = req.user!.role === Role.STUDENT;
+  const studentId = meIsStudent ? me : partnerId;
+  const teacherId = meIsStudent ? partnerId : me;
+
+  const apps = await prisma.application.findMany({
+    where: { studentId, topic: { teacherId } },
+    include: { topic: { select: { id: true, title: true } } },
+  });
+  const seen = new Set<number>();
+  const topics: { id: number; title: string }[] = [];
+  for (const a of apps) {
+    if (a.topic && !seen.has(a.topic.id)) {
+      seen.add(a.topic.id);
+      topics.push(a.topic);
+    }
+  }
+  res.json(topics);
+}

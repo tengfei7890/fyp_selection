@@ -161,4 +161,6 @@ export const messageApi = {
   send: (data: { receiverId: number; content: string; topicId?: number }) =>
     post<MessageItem>('/messages', data),
   unreadCount: () => get<{ count: number }>('/messages/unread-count'),
+  contextTopics: (partnerId: number) =>
+    get<{ id: number; title: string }[]>(`/messages/topics-with/${partnerId}`),
 };

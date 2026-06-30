@@ -23,10 +23,14 @@ import type { ItemType } from 'antd/es/menu/interface';
 const { Header, Sider, Content } = Layout;
 
 function msgLabel(unread: number) {
+  // 文字作为普通文本节点以继承菜单配色；未读数用独立徽标，避免 Badge 包裹导致颜色失效
   return (
-    <Badge count={unread} size="small" offset={[8, 0]}>
-      <span>消息</span>
-    </Badge>
+    <span>
+      消息
+      {unread > 0 && (
+        <Badge count={unread} size="small" style={{ marginLeft: 6 }} />
+      )}
+    </span>
   );
 }
 

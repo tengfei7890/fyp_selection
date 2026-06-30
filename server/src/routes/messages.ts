@@ -19,6 +19,7 @@ const sendSchema = z.object({
 
 router.get('/conversations', asyncHandler(msg.conversations));
 router.get('/unread-count', asyncHandler(msg.unreadCount));
+router.get('/topics-with/:partnerId', asyncHandler(msg.contextTopics));
 router.get('/with/:partnerId', asyncHandler(msg.thread));
 router.post('/', validateBody(sendSchema), asyncHandler(msg.send));
 

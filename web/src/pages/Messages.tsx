@@ -14,8 +14,8 @@ import {
 } from 'antd';
 import { PlusOutlined, ReloadOutlined } from '@ant-design/icons';
 import { useSearchParams } from 'react-router-dom';
-import { messageApi, topicApi } from '@/api';
-import type { Conversation, MessageItem, Topic } from '@/types';
+import { messageApi } from '@/api';
+import type { Conversation, MessageItem } from '@/types';
 import { useAuth } from '@/contexts/AuthContext';
 import { Role, RoleLabels } from '@shared/enums';
 import RecipientPickerModal from '@/components/RecipientPickerModal';
@@ -27,7 +27,6 @@ interface Partner {
 
 export default function Messages() {
   const { user } = useAuth();
-  const isStudent = user!.role === Role.STUDENT;
   const [searchParams] = useSearchParams();
 
   const [conversations, setConversations] = useState<Conversation[]>([]);
@@ -93,25 +92,17 @@ export default function Messages() {
     return () => clearInterval(id);
   }, [partner, loadConversations]);
 
-  // 切换对话对象时加载"相关课题"标签候选
+  // 切换对话对象时加载"相关课题"标签候选（仅该师生对关联的、学生已申请的课题）
   useEffect(() => {
     if (!partner) {
       setTagTopics([]);
       return;
     }
-    (async () => {
-      try {
-        const res = await topicApi.list({ page: 1, pageSize: 100 });
-        const items: Topic[] = res.items;
-        const list = isStudent
-          ? items.filter((t) => t.teacherId === partner.id)
-          : items;
-        setTagTopics(list.map((t) => ({ id: t.id, title: t.title })));
-      } catch {
-        /* ignore */
-      }
-    })();
-  }, [partner, isStudent]);
+    messageApi
+      .contextTopics(partner.id)
+      .then(setTagTopics)
+      .catch(() => setTagTopics([]));
+  }, [partner]);
 
   // 新消息时滚到底
   useEffect(() => {
