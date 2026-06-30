@@ -94,3 +94,23 @@ export const SystemPhaseLabels: Record<SystemPhase, string> = {
   [SystemPhase.SELECTION]: '选题进行',
   [SystemPhase.LOCKED]: '已锁定',
 };
+
+/* ----------------------------- 通知 ----------------------------- */
+
+export const NotificationType = {
+  APPLICATION_ACCEPTED: 'APPLICATION_ACCEPTED',
+  APPLICATION_REJECTED: 'APPLICATION_REJECTED',
+  ASSIGNMENT_CREATED: 'ASSIGNMENT_CREATED',
+  ASSIGNMENT_CLEARED: 'ASSIGNMENT_CLEARED',
+  NEW_APPLICATION: 'NEW_APPLICATION',
+} as const;
+export type NotificationType =
+  (typeof NotificationType)[keyof typeof NotificationType];
+
+export const NotificationTypeLabels: Record<NotificationType, string> = {
+  [NotificationType.APPLICATION_ACCEPTED]: '申请通过',
+  [NotificationType.APPLICATION_REJECTED]: '申请拒绝',
+  [NotificationType.ASSIGNMENT_CREATED]: '选题确定',
+  [NotificationType.ASSIGNMENT_CLEARED]: '选题清空',
+  [NotificationType.NEW_APPLICATION]: '新申请',
+};

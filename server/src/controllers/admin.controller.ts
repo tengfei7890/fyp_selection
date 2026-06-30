@@ -5,6 +5,7 @@ import { paginate } from '@/utils/pagination';
 import { hashPassword } from '@/utils/password';
 import { ApiError } from '@/utils/ApiError';
 import { publicUser } from '@/serializers';
+import { audit } from '@/utils/audit';
 import * as engine from '@/selection/engine';
 import { Role, SelectionMode, TopicStatus, UserStatus } from '@shared/enums';
 
@@ -74,6 +75,7 @@ export async function createUser(req: Request, res: Response) {
     });
   }
 
+  await audit(req.user!.id, 'user.create', 'user', user.id, `${user.name}(${user.role})`);
   res.status(201).json(publicUser(user));
 }
 
@@ -91,6 +93,7 @@ export async function updateUser(req: Request, res: Response) {
   if (password) data.passwordHash = hashPassword(password);
 
   const user = await prisma.user.update({ where: { id }, data });
+  await audit(req.user!.id, 'user.update', 'user', id);
   res.json(publicUser(user));
 }
 
@@ -99,6 +102,7 @@ export async function deleteUser(req: Request, res: Response) {
   const id = parseInt(req.params.id, 10);
   if (id === req.user!.id) throw new ApiError(400, '不能删除当前登录的管理员账号');
   await prisma.user.delete({ where: { id } });
+  await audit(req.user!.id, 'user.delete', 'user', id);
   res.json({ success: true });
 }
 
@@ -169,6 +173,7 @@ export async function updateSettings(req: Request, res: Response) {
     update: data,
     create: { id: 1, isLocked: isLocked ?? false, phase: (phase as never) ?? undefined },
   });
+  await audit(req.user!.id, 'system.settings', 'system', undefined, `isLocked=${isLocked ?? ''} phase=${phase ?? ''}`);
   res.json(settings);
 }
 
@@ -222,6 +227,7 @@ export async function createAssignment(req: Request, res: Response) {
       topic: { select: { id: true, title: true } },
     },
   });
+  await audit(req.user!.id, 'assignment.create', 'assignment', created?.id);
   res.status(201).json(created);
 }
 
@@ -235,6 +241,7 @@ export async function updateAssignment(req: Request, res: Response) {
   if (note !== undefined) data.note = note;
 
   const updated = await prisma.assignment.update({ where: { id }, data });
+  await audit(req.user!.id, 'assignment.update', 'assignment', id);
   res.json(updated);
 }
 
@@ -242,7 +249,35 @@ export async function updateAssignment(req: Request, res: Response) {
 export async function deleteAssignment(req: Request, res: Response) {
   const id = parseInt(req.params.id, 10);
   await prisma.assignment.delete({ where: { id } });
+  await audit(req.user!.id, 'assignment.delete', 'assignment', id);
   res.json({ success: true });
+}
+
+/* ------------------------------ 审计日志 ------------------------------ */
+
+/** GET /api/admin/audit — 审计日志（分页 + 按 action/关键字筛选） */
+export async function listAudit(req: Request, res: Response) {
+  const { page, pageSize, skip, take } = paginate(req);
+  const q = (req.query.q as string | undefined)?.trim();
+  const action = req.query.action as string | undefined;
+
+  const where: Prisma.AuditLogWhereInput = {};
+  if (action) where.action = { contains: action };
+  if (q) {
+    where.OR = [{ action: { contains: q } }, { detail: { contains: q } }];
+  }
+
+  const [items, total] = await Promise.all([
+    prisma.auditLog.findMany({
+      where,
+      include: { actor: { select: { id: true, name: true, username: true } } },
+      skip,
+      take,
+      orderBy: { createdAt: 'desc' },
+    }),
+    prisma.auditLog.count({ where }),
+  ]);
+  res.json({ items, total, page, pageSize });
 }
 
 interface CreateUserInput {

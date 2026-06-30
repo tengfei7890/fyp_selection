@@ -9,6 +9,8 @@ import type {
   StudentSearchItem,
   Conversation,
   MessageItem,
+  NotificationItem,
+  AuditLogItem,
   SystemSettings,
   AdminStats,
   Paginated,
@@ -50,6 +52,8 @@ export interface ListParams {
   role?: string;
   skillId?: number;
   major?: string;
+  eligibleOnly?: boolean;
+  action?: string;
 }
 
 /* ------------------------------- Auth ------------------------------- */
@@ -150,6 +154,11 @@ export const adminApi = {
       put<Assignment>(`/admin/assignments/${id}`, data),
     remove: (id: number) => del<{ success: boolean }>(`/admin/assignments/${id}`),
   },
+  // 审计日志
+  audit: {
+    list: (params: ListParams) =>
+      get<Paginated<AuditLogItem>>('/admin/audit', params),
+  },
 };
 
 /* ----------------------------- Messages ---------------------------- */
@@ -163,4 +172,11 @@ export const messageApi = {
   unreadCount: () => get<{ count: number }>('/messages/unread-count'),
   contextTopics: (partnerId: number) =>
     get<{ id: number; title: string }[]>(`/messages/topics-with/${partnerId}`),
+};
+
+/* --------------------------- Notifications -------------------------- */
+export const notificationApi = {
+  list: () => get<NotificationItem[]>('/notifications'),
+  unreadCount: () => get<{ count: number }>('/notifications/unread-count'),
+  markAllRead: () => post<{ success: boolean }>('/notifications/mark-all-read'),
 };

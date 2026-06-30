@@ -122,7 +122,11 @@ export async function runRandom(topicId: number, actorId: number) {
         data: { status: TopicStatus.CLOSED },
       });
     }
-    return { assigned: picked.length, totalAssigned };
+    return {
+      assigned: picked.length,
+      totalAssigned,
+      studentIds: picked.map((a) => a.studentId),
+    };
   });
 }
 
@@ -175,7 +179,11 @@ export async function runRangeRandom(
         data: { status: TopicStatus.CLOSED },
       });
     }
-    return { assigned: picked.length, totalAssigned };
+    return {
+      assigned: picked.length,
+      totalAssigned,
+      studentIds: picked.map((a) => a.studentId),
+    };
   });
 }
 
@@ -192,6 +200,7 @@ export async function directAssign(
     const remaining = topic.capacity - assignedCount;
     if (remaining <= 0) throw new ApiError(400, '该课题已满员');
 
+    const assignedIds: number[] = [];
     let created = 0;
     for (const studentId of studentIds) {
       if (created >= remaining) break;
@@ -201,6 +210,7 @@ export async function directAssign(
         method: SelectionMode.DIRECT,
         assignedBy: actorId,
       });
+      assignedIds.push(studentId);
       created++;
     }
 
@@ -210,7 +220,11 @@ export async function directAssign(
         data: { status: TopicStatus.CLOSED },
       });
     }
-    return { assigned: created, skipped: studentIds.length - created };
+    return {
+      assigned: created,
+      skipped: studentIds.length - created,
+      studentIds: assignedIds,
+    };
   });
 }
 
@@ -245,7 +259,7 @@ export async function mutualAccept(applicationId: number, actorId: number) {
         data: { status: TopicStatus.CLOSED },
       });
     }
-    return { success: true };
+    return { success: true, studentId: app.studentId, topicId: app.topicId };
   });
 }
 
@@ -262,7 +276,7 @@ export async function mutualReject(applicationId: number) {
     where: { id: applicationId },
     data: { status: ApplicationStatus.REJECTED, rejectReason: 'manual' },
   });
-  return { success: true };
+  return { success: true, studentId: app.studentId, topicId: app.topicId };
 }
 
 /** 清空某课题全部选题结果（重选），并回滚相关申请状态。 */
@@ -308,7 +322,7 @@ export async function clearTopicAssignments(topicId: number) {
         data: { status: TopicStatus.OPEN },
       });
     }
-    return { cleared: result.count };
+    return { cleared: result.count, studentIds: freedIds };
   });
 }
 

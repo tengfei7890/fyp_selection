@@ -86,4 +86,7 @@ router.put(
 );
 router.delete('/assignments/:id', asyncHandler(admin.deleteAssignment));
 
+// 审计日志
+router.get('/audit', asyncHandler(admin.listAudit));
+
 export default router;

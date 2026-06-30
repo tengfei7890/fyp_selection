@@ -270,6 +270,18 @@ export default function TeacherApplications() {
                   { title: '专业', render: (_: unknown, a: Application) => a.student?.studentProfile?.major ?? '-' },
                   { title: 'GPA', width: 70, render: (_: unknown, a: Application) => a.student?.studentProfile?.gpa ?? '-' },
                   {
+                    title: '符合要求',
+                    width: 90,
+                    render: (_: unknown, a: Application) =>
+                      a.eligible === undefined ? (
+                        '-'
+                      ) : a.eligible ? (
+                        <Tag color="green">合格</Tag>
+                      ) : (
+                        <Tag color="red">不合格</Tag>
+                      ),
+                  },
+                  {
                     title: '技能',
                     render: (_: unknown, a: Application) =>
                       (a.student?.studentProfile?.skills ?? []).map((s) => (

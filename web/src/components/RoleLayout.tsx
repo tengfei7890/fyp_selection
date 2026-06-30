@@ -13,10 +13,12 @@ import {
   LogoutOutlined,
   CheckCircleOutlined,
   MessageOutlined,
+  BellOutlined,
+  FileSearchOutlined,
 } from '@ant-design/icons';
 import { Outlet, useLocation, useNavigate } from 'react-router-dom';
 import { useAuth } from '@/contexts/AuthContext';
-import { messageApi } from '@/api';
+import { messageApi, notificationApi } from '@/api';
 import { Role, RoleLabels } from '@shared/enums';
 import type { ItemType } from 'antd/es/menu/interface';
 
@@ -56,6 +58,7 @@ function menuItems(role: Role, unread: number): ItemType[] {
         { key: '/admin/users', icon: <TeamOutlined />, label: '用户管理' },
         { key: '/admin/topics', icon: <BookOutlined />, label: '课题总览' },
         { key: '/admin/assignments', icon: <CheckCircleOutlined />, label: '选题结果' },
+        { key: '/admin/audit', icon: <FileSearchOutlined />, label: '审计日志' },
         { key: '/admin/settings', icon: <SettingOutlined />, label: '系统设置' },
       ];
     default:
@@ -68,6 +71,7 @@ export default function RoleLayout() {
   const navigate = useNavigate();
   const location = useLocation();
   const [unread, setUnread] = useState(0);
+  const [notifUnread, setNotifUnread] = useState(0);
 
   // 教师/学生：每 30s 轮询未读数（管理员无站内信）
   const canMsg = user?.role === Role.TEACHER || user?.role === Role.STUDENT;
@@ -79,7 +83,23 @@ export default function RoleLayout() {
     return () => clearInterval(id);
   }, [canMsg]);
 
+  // 所有用户：每 30s 轮询通知未读数
+  useEffect(() => {
+    const tick = () => notificationApi.unreadCount().then((r) => setNotifUnread(r.count)).catch(() => undefined);
+    tick();
+    const id = setInterval(tick, 30000);
+    return () => clearInterval(id);
+  }, []);
+
+  const [collapsed, setCollapsed] = useState(false);
   const items = useMemo(() => menuItems(user!.role, unread), [user!.role, unread]);
+
+  const headerTitle =
+    user!.role === Role.ADMIN
+      ? '管理中心'
+      : user!.role === Role.TEACHER
+        ? '教师工作台'
+        : '学生中心';
 
   // 选中态：取当前路径中与菜单 key 的最长前缀匹配
   const selectedKey =
@@ -90,18 +110,28 @@ export default function RoleLayout() {
 
   return (
     <Layout style={{ minHeight: '100vh' }}>
-      <Sider collapsible breakpoint="lg" theme="dark">
+      <Sider
+        collapsible
+        collapsed={collapsed}
+        onCollapse={setCollapsed}
+        breakpoint="lg"
+        theme="dark"
+        style={{ overflow: 'hidden' }}
+      >
         <div
           style={{
             height: 56,
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
             color: '#fff',
-            textAlign: 'center',
-            lineHeight: '56px',
             fontWeight: 600,
-            fontSize: 16,
+            fontSize: collapsed ? 18 : 15,
+            whiteSpace: 'nowrap',
+            overflow: 'hidden',
           }}
         >
-          毕业设计选题系统
+          {collapsed ? '毕设' : '毕业设计选题系统'}
         </div>
         <Menu
           theme="dark"
@@ -115,23 +145,34 @@ export default function RoleLayout() {
         <Header
           style={{
             background: '#fff',
-            padding: '0 24px',
+            padding: '0 20px',
             display: 'flex',
             justifyContent: 'space-between',
             alignItems: 'center',
+            gap: 12,
           }}
         >
-          <Typography.Title level={4} style={{ margin: 0 }}>
-            {items?.find((i) => (i as { key: string }).key === selectedKey)
-              ? String(
-                  (items?.find(
-                    (i) => (i as { key: string }).key === selectedKey,
-                  ) as { label: string })?.label,
-                )
-              : '首页'}
+          <Typography.Title
+            level={4}
+            style={{
+              margin: 0,
+              minWidth: 0,
+              overflow: 'hidden',
+              textOverflow: 'ellipsis',
+              whiteSpace: 'nowrap',
+            }}
+          >
+            {headerTitle}
           </Typography.Title>
-          <Space>
-            <span>{user?.name}</span>
+          <Space size="middle" style={{ flexShrink: 0 }}>
+            <Badge count={notifUnread} size="small">
+              <Button
+                type="text"
+                icon={<BellOutlined />}
+                onClick={() => navigate(`/${user!.role.toLowerCase()}/notifications`)}
+              />
+            </Badge>
+            <span style={{ whiteSpace: 'nowrap' }}>{user?.name}</span>
             <Tag color="blue">{user ? RoleLabels[user.role] : ''}</Tag>
             <Button
               icon={<LogoutOutlined />}

@@ -1,7 +1,14 @@
 import type { Request, Response } from 'express';
 import { prisma } from '@/prisma';
 import { ApiError } from '@/utils/ApiError';
-import { ApplicationStatus, Role, TopicStatus } from '@shared/enums';
+import { notify } from '@/utils/notify';
+import { isEligible } from '@/selection/eligibility';
+import {
+  ApplicationStatus,
+  NotificationType,
+  Role,
+  TopicStatus,
+} from '@shared/enums';
 
 /** POST /api/applications — 学生申请课题 */
 export async function create(req: Request, res: Response) {
@@ -29,6 +36,16 @@ export async function create(req: Request, res: Response) {
     data: { studentId, topicId, message },
     include: { topic: { select: { id: true, title: true } } },
   });
+
+  // 通知该课题教师：收到新申请
+  await notify(
+    topic.teacherId,
+    NotificationType.NEW_APPLICATION,
+    `收到 ${req.user!.name} 对《${topic.title}》的新申请`,
+    'topic',
+    topicId,
+  );
+
   res.status(201).json(application);
 }
 
@@ -54,7 +71,10 @@ export async function listByTopic(req: Request, res: Response) {
   const topicId = parseInt(req.query.topicId as string, 10);
   if (!topicId) throw new ApiError(400, '缺少 topicId 参数');
 
-  const topic = await prisma.topic.findUnique({ where: { id: topicId } });
+  const topic = await prisma.topic.findUnique({
+    where: { id: topicId },
+    include: { requirements: true },
+  });
   if (!topic) throw new ApiError(404, '课题不存在');
   if (req.user!.role === Role.TEACHER && topic.teacherId !== req.user!.id) {
     throw new ApiError(403, '无权查看该课题的申请人');
@@ -82,7 +102,24 @@ export async function listByTopic(req: Request, res: Response) {
     },
     orderBy: { createdAt: 'asc' },
   });
-  res.json(applications);
+
+  // 标记每位申请人是否满足课题要求（合格/不合格）
+  const requiredSkillIds = topic.requirements.map((r) => r.skillId);
+  const result = applications.map((a) => {
+    const p = a.student.studentProfile;
+    const eligible = p
+      ? isEligible(
+          {
+            gpaThreshold: topic.gpaThreshold,
+            majorRestriction: topic.majorRestriction,
+            requiredSkillIds,
+          },
+          { gpa: p.gpa, major: p.major, skillIds: p.skills.map((s) => s.skillId) },
+        )
+      : false;
+    return { ...a, eligible };
+  });
+  res.json(result);
 }
 
 /** PATCH /api/applications/:id/withdraw — 学生撤回申请 */

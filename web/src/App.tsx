@@ -13,10 +13,12 @@ import MyProfile from '@/pages/student/MyProfile';
 import MyTopics from '@/pages/teacher/MyTopics';
 import TeacherApplications from '@/pages/teacher/TeacherApplications';
 import Messages from '@/pages/Messages';
+import Notifications from '@/pages/Notifications';
 import Dashboard from '@/pages/admin/Dashboard';
 import AdminUsers from '@/pages/admin/AdminUsers';
 import AdminTopics from '@/pages/admin/AdminTopics';
 import AdminAssignments from '@/pages/admin/AdminAssignments';
+import AdminAudit from '@/pages/admin/AdminAudit';
 import AdminSettings from '@/pages/admin/AdminSettings';
 
 function RootRedirect() {
@@ -48,6 +50,7 @@ export default function App() {
             <Route path="favorites" element={<Favorites />} />
             <Route path="applications" element={<MyApplications />} />
             <Route path="messages" element={<Messages />} />
+            <Route path="notifications" element={<Notifications />} />
             <Route path="profile" element={<MyProfile />} />
           </Route>
 
@@ -63,6 +66,7 @@ export default function App() {
             <Route index element={<MyTopics />} />
             <Route path="applications" element={<TeacherApplications />} />
             <Route path="messages" element={<Messages />} />
+            <Route path="notifications" element={<Notifications />} />
           </Route>
 
           {/* 管理员 */}
@@ -78,6 +82,8 @@ export default function App() {
             <Route path="users" element={<AdminUsers />} />
             <Route path="topics" element={<AdminTopics />} />
             <Route path="assignments" element={<AdminAssignments />} />
+            <Route path="audit" element={<AdminAudit />} />
+            <Route path="notifications" element={<Notifications />} />
             <Route path="settings" element={<AdminSettings />} />
           </Route>
 

@@ -1,5 +1,5 @@
 import { useEffect, useState, useCallback } from 'react';
-import { Table, Input, Card, Space, Button, Select } from 'antd';
+import { Table, Input, Card, Space, Button, Select, Switch, Tooltip } from 'antd';
 import { Link } from 'react-router-dom';
 import { topicApi, skillApi } from '@/api';
 import type { Topic, Skill, Paginated } from '@/types';
@@ -11,6 +11,7 @@ export default function Browse() {
   const [q, setQ] = useState('');
   const [skillId, setSkillId] = useState<number | undefined>();
   const [major, setMajor] = useState('');
+  const [eligibleOnly, setEligibleOnly] = useState(false);
   const [loading, setLoading] = useState(false);
   const [page, setPage] = useState(1);
   const pageSize = 10;
@@ -18,12 +19,12 @@ export default function Browse() {
   const load = useCallback(async () => {
     setLoading(true);
     try {
-      const res = await topicApi.list({ q, skillId, major, page, pageSize });
+      const res = await topicApi.list({ q, skillId, major, eligibleOnly, page, pageSize });
       setData(res);
     } finally {
       setLoading(false);
     }
-  }, [q, skillId, major, page]);
+  }, [q, skillId, major, eligibleOnly, page]);
 
   useEffect(() => {
     load();
@@ -71,6 +72,18 @@ export default function Browse() {
               setPage(1);
             }}
           />
+          <Tooltip title="按你的 GPA / 专业 / 技能过滤出符合要求的课题">
+            <Space size={4}>
+              <Switch
+                checked={eligibleOnly}
+                onChange={(v) => {
+                  setEligibleOnly(v);
+                  setPage(1);
+                }}
+              />
+              <span>只看我符合条件的</span>
+            </Space>
+          </Tooltip>
         </Space>
         <Table
           rowKey="id"

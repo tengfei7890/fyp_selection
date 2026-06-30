@@ -5,6 +5,7 @@ import type {
   ApplicationStatus,
   UserStatus,
   SystemPhase,
+  NotificationType,
 } from '@shared/enums';
 
 export interface Skill {
@@ -68,6 +69,8 @@ export interface Application {
   status: ApplicationStatus;
   /** 拒绝原因：cascade=一人一题级联拒绝；manual=教师手动拒绝 */
   rejectReason?: 'cascade' | 'manual' | null;
+  /** 教师查看申请人时：该生是否满足课题要求 */
+  eligible?: boolean;
   message?: string | null;
   createdAt: string;
   updatedAt?: string;
@@ -126,6 +129,30 @@ export interface Conversation {
   partner: { id: number; name: string; role: Role };
   lastMessage: { content: string; createdAt: string; senderId: number } | null;
   unread: number;
+}
+
+/** 站内通知 */
+export interface NotificationItem {
+  id: number;
+  userId: number;
+  type: NotificationType;
+  content: string;
+  refType?: string | null;
+  refId?: number | null;
+  readAt?: string | null;
+  createdAt: string;
+}
+
+/** 审计日志 */
+export interface AuditLogItem {
+  id: number;
+  actorId: number;
+  action: string;
+  targetType?: string | null;
+  targetId?: number | null;
+  detail?: string | null;
+  createdAt: string;
+  actor?: { id: number; name: string; username: string };
 }
 
 export interface SystemSettings {

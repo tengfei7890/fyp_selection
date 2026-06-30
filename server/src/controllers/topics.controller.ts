@@ -3,6 +3,8 @@ import { Prisma } from '@prisma/client';
 import { prisma } from '@/prisma';
 import { paginate } from '@/utils/pagination';
 import { ApiError } from '@/utils/ApiError';
+import { audit } from '@/utils/audit';
+import { isEligible } from '@/selection/eligibility';
 import { Role, SelectionMode, TopicStatus } from '@shared/enums';
 
 const topicInclude = {
@@ -53,6 +55,46 @@ function buildWhere(req: Request): Prisma.TopicWhereInput {
 export async function list(req: Request, res: Response) {
   const { page, pageSize, skip, take } = paginate(req);
   const where = buildWhere(req);
+
+  // 学生可按自身档案过滤"我符合条件的课题"
+  const eligibleOnly =
+    req.query.eligibleOnly === 'true' && req.user!.role === Role.STUDENT;
+  if (eligibleOnly) {
+    const [profile, topics] = await Promise.all([
+      prisma.studentProfile.findUnique({
+        where: { userId: req.user!.id },
+        include: { skills: true },
+      }),
+      prisma.topic.findMany({
+        where,
+        include: topicInclude,
+        orderBy: { createdAt: 'desc' },
+      }),
+    ]);
+    const filtered = profile
+      ? topics.filter((t) =>
+          isEligible(
+            {
+              gpaThreshold: t.gpaThreshold,
+              majorRestriction: t.majorRestriction,
+              requiredSkillIds: t.requirements.map((r) => r.skillId),
+            },
+            {
+              gpa: profile.gpa,
+              major: profile.major,
+              skillIds: profile.skills.map((s) => s.skillId),
+            },
+          ),
+        )
+      : [];
+    res.json({
+      items: filtered,
+      total: filtered.length,
+      page: 1,
+      pageSize: filtered.length,
+    });
+    return;
+  }
 
   const [items, total] = await Promise.all([
     prisma.topic.findMany({
@@ -123,6 +165,7 @@ export async function create(req: Request, res: Response) {
     include: topicInclude,
   });
 
+  await audit(req.user!.id, 'topic.create', 'topic', topic.id, topic.title);
   res.status(201).json(topic);
 }
 
@@ -167,6 +210,7 @@ export async function update(req: Request, res: Response) {
     });
   });
 
+  await audit(req.user!.id, 'topic.update', 'topic', topic.id, topic.title);
   res.json(topic);
 }
 
@@ -181,6 +225,7 @@ export async function updateStatus(req: Request, res: Response) {
     data: { status },
     include: topicInclude,
   });
+  await audit(req.user!.id, 'topic.status', 'topic', topic.id, `状态→${status}`);
   res.json(topic);
 }
 
@@ -189,6 +234,7 @@ export async function remove(req: Request, res: Response) {
   const id = parseInt(req.params.id, 10);
   await ensureOwnTopic(id, req.user!.id, req.user!.role);
   await prisma.topic.delete({ where: { id } });
+  await audit(req.user!.id, 'topic.delete', 'topic', id);
   res.json({ success: true });
 }
 

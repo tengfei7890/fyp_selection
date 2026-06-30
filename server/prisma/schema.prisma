@@ -71,6 +71,8 @@ model User {
   assignments      Assignment[]
   messagesSent     Message[] @relation("MessageSender")
   messagesReceived Message[] @relation("MessageReceiver")
+  notifications    Notification[]
+  auditLogs        AuditLog[]
 
   @@map("users")
 }
@@ -220,4 +222,46 @@ model SystemSetting {
   updatedAt DateTime     @updatedAt @map("updated_at")
 
   @@map("system_settings")
+}
+
+/// 站内通知类型
+enum NotificationType {
+  APPLICATION_ACCEPTED // 教师通过（学生被确定）
+  APPLICATION_REJECTED // 教师拒绝
+  ASSIGNMENT_CREATED   // 被确定为某课题
+  ASSIGNMENT_CLEARED   // 课题结果被清空
+  NEW_APPLICATION      // 收到新申请（教师）
+}
+
+model Notification {
+  id        Int              @id @default(autoincrement())
+  userId    Int              @map("user_id")
+  type      NotificationType
+  content   String           @db.Text
+  refType   String?          @map("ref_type") @db.VarChar(32) // topic/application/assignment
+  refId     Int?             @map("ref_id")
+  readAt    DateTime?        @map("read_at")
+  createdAt DateTime         @default(now()) @map("created_at")
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId, readAt])
+  @@map("notifications")
+}
+
+/// 审计日志：记录关键写操作与选题执行
+model AuditLog {
+  id         Int      @id @default(autoincrement())
+  actorId    Int      @map("actor_id")
+  action     String   @db.VarChar(64) // 如 user.create / topic.update / selection.random / system.lock
+  targetType String?  @map("target_type") @db.VarChar(32)
+  targetId   Int?     @map("target_id")
+  detail     String?  @db.Text // 可读描述或 JSON
+  createdAt  DateTime @default(now()) @map("created_at")
+
+  actor User @relation(fields: [actorId], references: [id], onDelete: Cascade)
+
+  @@index([createdAt])
+  @@index([actorId])
+  @@map("audit_logs")
 }
