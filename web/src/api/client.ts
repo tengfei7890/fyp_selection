@@ -1,5 +1,6 @@
 import axios from 'axios';
 import { message } from 'antd';
+import i18n from '@/i18n';
 
 /**
  * 统一的 axios 实例：自动携带 JWT；响应拦截器解包为 data；
@@ -16,12 +17,20 @@ instance.interceptors.request.use((config) => {
 instance.interceptors.response.use(
   (res) => res.data,
   (err) => {
-    const status = err.response?.status;
-    const msg = err.response?.data?.error || err.message || '请求失败';
+    const data = err.response?.data;
+    const status = err.response?.status as number | undefined;
+    let msg: string;
+    if (data?.code && i18n.exists('error.' + data.code)) {
+      msg = i18n.t('error.' + data.code);
+    } else if (status && i18n.exists('error._fallback_' + status)) {
+      msg = i18n.t('error._fallback_' + status);
+    } else {
+      msg = data?.error || err.message || i18n.t('error._fallback_500');
+    }
     if (status === 401 && !window.location.pathname.startsWith('/login')) {
       localStorage.removeItem('fyp_token');
       localStorage.removeItem('fyp_user');
-      message.error('登录已过期，请重新登录');
+      message.error(i18n.t('error.UNAUTHENTICATED'));
       window.location.href = '/login';
     }
     return Promise.reject(new Error(msg));

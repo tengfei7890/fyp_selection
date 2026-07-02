@@ -1,26 +1,18 @@
 import { useEffect, useState, useCallback } from 'react';
 import { Modal, Input, Table, Empty, message } from 'antd';
+import { useTranslation } from 'react-i18next';
 import { userApi } from '@/api';
 import type { StudentSearchItem } from '@/types';
 
 interface Props {
   open: boolean;
-  /** 已分配/已选中的学生 id，列表中排除 */
   excludeIds?: number[];
   onClose: () => void;
   onConfirm: (students: StudentSearchItem[]) => void;
 }
 
-/**
- * 学生搜索多选弹窗：用于教师"直接指定"与管理员改派。
- * 支持按姓名/用户名/学号搜索。
- */
-export default function StudentPickerModal({
-  open,
-  excludeIds = [],
-  onClose,
-  onConfirm,
-}: Props) {
+export default function StudentPickerModal({ open, excludeIds = [], onClose, onConfirm }: Props) {
+  const { t } = useTranslation();
   const [q, setQ] = useState('');
   const [items, setItems] = useState<StudentSearchItem[]>([]);
   const [loading, setLoading] = useState(false);
@@ -49,22 +41,22 @@ export default function StudentPickerModal({
 
   return (
     <Modal
-      title="选择学生"
+      title={t('teacherApp.directPick')}
       open={open}
       onCancel={onClose}
       onOk={() => {
         if (selected.length === 0) {
-          message.warning('请至少选择一名学生');
+          message.warning(t('adminAssignments.requireStudent'));
           return;
         }
         onConfirm(selected);
       }}
       width={640}
-      okText={`确定（已选 ${selected.length}）`}
+      okText={`${t('common.ok')}（${selected.length}）`}
       destroyOnClose
     >
       <Input.Search
-        placeholder="按姓名 / 用户名 / 学号搜索"
+        placeholder={t('adminAssignments.fStudentSearch')}
         allowClear
         value={q}
         onChange={(e) => setQ(e.target.value)}
@@ -80,15 +72,14 @@ export default function StudentPickerModal({
         scroll={{ y: 280 }}
         rowSelection={{
           selectedRowKeys: selected.map((s) => s.id),
-          onChange: (keys) =>
-            setSelected(visible.filter((s) => keys.includes(s.id))),
+          onChange: (keys) => setSelected(visible.filter((s) => keys.includes(s.id))),
         }}
-        locale={{ emptyText: <Empty description="没有可选学生" /> }}
+        locale={{ emptyText: <Empty description={t('common.none')} /> }}
         columns={[
-          { title: '姓名', dataIndex: 'name' },
-          { title: '学号', render: (_: unknown, r: StudentSearchItem) => r.studentProfile?.studentNo ?? '-' },
-          { title: '专业', render: (_: unknown, r: StudentSearchItem) => r.studentProfile?.major ?? '-' },
-          { title: 'GPA', width: 70, render: (_: unknown, r: StudentSearchItem) => r.studentProfile?.gpa ?? '-' },
+          { title: t('adminAssignments.colStudent'), dataIndex: 'name' },
+          { title: t('profile.studentNo'), render: (_: unknown, r: StudentSearchItem) => r.studentProfile?.studentNo ?? '-' },
+          { title: t('adminAssignments.colMajor'), render: (_: unknown, r: StudentSearchItem) => r.studentProfile?.major ?? '-' },
+          { title: t('adminAssignments.colGpa'), width: 70, render: (_: unknown, r: StudentSearchItem) => r.studentProfile?.gpa ?? '-' },
         ]}
       />
     </Modal>

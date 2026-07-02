@@ -9,7 +9,7 @@ export const validateBody =
     const result = schema.safeParse(req.body);
     if (!result.success) {
       return next(
-        new ApiError(400, '请求参数校验失败', result.error.flatten()),
+        new ApiError(400, '请求参数校验失败', 'VALIDATION_ERROR', result.error.flatten()),
       );
     }
     req.body = result.data;

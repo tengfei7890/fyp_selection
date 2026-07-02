@@ -1,11 +1,13 @@
 import { useEffect, useState, useCallback } from 'react';
 import { Card, Table, Button, Space, Popconfirm, message } from 'antd';
+import { useTranslation } from 'react-i18next';
 import { adminApi, skillApi, topicApi } from '@/api';
 import type { Topic, Skill, Paginated } from '@/types';
 import TopicFormModal from '@/components/TopicFormModal';
 import { TopicStatusTag, SelectionModeTag } from '@/components/StatusTags';
 
 export default function AdminTopics() {
+  const { t } = useTranslation();
   const [data, setData] = useState<Paginated<Topic>>({ items: [], total: 0, page: 1, pageSize: 10 });
   const [skills, setSkills] = useState<Skill[]>([]);
   const [loading, setLoading] = useState(false);
@@ -30,16 +32,15 @@ export default function AdminTopics() {
     skillApi.list().then(setSkills).catch(() => undefined);
   }, []);
 
-  const openEdit = (t: Topic) => {
-    setEditing(t);
+  const openEdit = (t_: Topic) => {
+    setEditing(t_);
     setOpen(true);
   };
 
   const remove = async (id: number) => {
     try {
-      // 复用 topics 删除接口（后端已放行 ADMIN）
       await topicApi.remove(id);
-      message.success('课题已删除');
+      message.success(t('common.deleted'));
       load();
     } catch (err) {
       message.error((err as Error).message);
@@ -48,55 +49,47 @@ export default function AdminTopics() {
 
   return (
     <div className="page-container">
-      <Card
-        title="课题总览"
-        extra={<Button onClick={load}>刷新</Button>}
-      >
+      <Card title={t('adminTopics.title')} extra={<Button onClick={load}>{t('common.refresh')}</Button>}>
         <Table
           rowKey="id"
           loading={loading}
           dataSource={data.items}
-          pagination={{
-            current: data.page,
-            pageSize: 10,
-            total: data.total,
-            onChange: setPage,
-          }}
+          pagination={{ current: data.page, pageSize: 10, total: data.total, onChange: setPage }}
           columns={[
-            { title: '课题标题', dataIndex: 'title' },
-            { title: '指导教师', render: (_: unknown, r: Topic) => r.teacher?.name ?? '-' },
+            { title: t('adminTopics.colTitle'), dataIndex: 'title' },
+            { title: t('adminTopics.colTeacher'), render: (_: unknown, r: Topic) => r.teacher?.name ?? '-' },
             {
-              title: '选题模式',
+              title: t('adminTopics.colMode'),
               dataIndex: 'selectionMode',
               render: (m: Topic['selectionMode']) => <SelectionModeTag mode={m} />,
             },
-            { title: '容量', dataIndex: 'capacity', width: 70 },
+            { title: t('adminTopics.colCapacity'), dataIndex: 'capacity', width: 70 },
             {
-              title: '申请数',
+              title: t('adminTopics.colApplied'),
               width: 80,
               render: (_: unknown, r: Topic) => r._count?.applications ?? 0,
             },
             {
-              title: '已分配',
+              title: t('adminTopics.colAssigned'),
               width: 80,
               render: (_: unknown, r: Topic) => r._count?.assignments ?? 0,
             },
             {
-              title: '状态',
+              title: t('adminTopics.colStatus'),
               dataIndex: 'status',
               render: (s: Topic['status']) => <TopicStatusTag status={s} />,
             },
             {
-              title: '操作',
+              title: t('common.action'),
               width: 140,
               render: (_: unknown, r: Topic) => (
                 <Space size="small">
                   <Button size="small" onClick={() => openEdit(r)}>
-                    编辑
+                    {t('common.edit')}
                   </Button>
-                  <Popconfirm title="确定删除该课题？" onConfirm={() => remove(r.id)}>
+                  <Popconfirm title={t('adminTopics.deleteConfirm')} onConfirm={() => remove(r.id)}>
                     <Button size="small" type="link" danger>
-                      删除
+                      {t('common.delete')}
                     </Button>
                   </Popconfirm>
                 </Space>
@@ -106,13 +99,7 @@ export default function AdminTopics() {
         />
       </Card>
 
-      <TopicFormModal
-        open={open}
-        topic={editing}
-        skills={skills}
-        onClose={() => setOpen(false)}
-        onSaved={load}
-      />
+      <TopicFormModal open={open} topic={editing} skills={skills} onClose={() => setOpen(false)} onSaved={load} />
     </div>
   );
 }

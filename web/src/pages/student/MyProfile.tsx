@@ -1,10 +1,12 @@
 import { useEffect, useState } from 'react';
 import { Card, Form, Input, InputNumber, Select, Button, message, Spin } from 'antd';
+import { useTranslation } from 'react-i18next';
 import { skillApi, userApi } from '@/api';
 import { useAuth } from '@/contexts/AuthContext';
 import type { Skill } from '@/types';
 
 export default function MyProfile() {
+  const { t } = useTranslation();
   const { user, setUser } = useAuth();
   const [skills, setSkills] = useState<Skill[]>([]);
   const [loading, setLoading] = useState(true);
@@ -46,7 +48,7 @@ export default function MyProfile() {
         skillIds: (values.skillIds as number[]) ?? [],
       });
       setUser(updated);
-      message.success('档案已保存');
+      message.success(t('common.updated'));
     } catch (err) {
       message.error((err as Error).message);
     } finally {
@@ -58,34 +60,34 @@ export default function MyProfile() {
 
   return (
     <div className="page-container">
-      <Card title="个人档案" style={{ maxWidth: 720 }}>
+      <Card title={t('profile.title')} style={{ maxWidth: 720 }}>
         <Form form={form} layout="vertical" onFinish={onFinish}>
-          <Form.Item label="学号" name="studentNo" rules={[{ required: true, message: '请输入学号' }]}>
-            <Input placeholder="如 2022001" />
+          <Form.Item label={t('profile.studentNo')} name="studentNo" rules={[{ required: true, message: t('profile.requireStudentNo') }]}>
+            <Input placeholder={t('profile.studentNoPlaceholder')} />
           </Form.Item>
-          <Form.Item label="专业" name="major" rules={[{ required: true, message: '请输入专业' }]}>
-            <Input placeholder="如 计算机科学与技术" />
+          <Form.Item label={t('profile.major')} name="major" rules={[{ required: true, message: t('profile.requireMajor') }]}>
+            <Input placeholder={t('profile.majorPlaceholder')} />
           </Form.Item>
-          <Form.Item label="年级" name="grade">
-            <Input placeholder="如 2022" />
+          <Form.Item label={t('profile.grade')} name="grade">
+            <Input placeholder={t('profile.gradePlaceholder')} />
           </Form.Item>
-          <Form.Item label="平均成绩（GPA，0-5）" name="gpa">
-            <InputNumber min={0} max={5} step={0.1} style={{ width: '100%' }} placeholder="如 3.8" />
+          <Form.Item label={t('profile.gpa')} name="gpa">
+            <InputNumber min={0} max={5} step={0.1} style={{ width: '100%' }} placeholder={t('profile.gpaPlaceholder')} />
           </Form.Item>
-          <Form.Item label="技能库（可多选）" name="skillIds">
+          <Form.Item label={t('profile.skills')} name="skillIds">
             <Select
               mode="multiple"
-              placeholder="选择你掌握的技能"
+              placeholder={t('profile.skillsPlaceholder')}
               optionFilterProp="label"
               options={skills.map((s) => ({ label: `${s.name}${s.category ? `（${s.category}）` : ''}`, value: s.id }))}
             />
           </Form.Item>
-          <Form.Item label="个人简介" name="bio">
-            <Input.TextArea rows={4} maxLength={500} placeholder="简短介绍你的背景、项目经历等" />
+          <Form.Item label={t('profile.bio')} name="bio">
+            <Input.TextArea rows={4} maxLength={500} placeholder={t('profile.bioPlaceholder')} />
           </Form.Item>
           <Form.Item>
             <Button type="primary" htmlType="submit" loading={saving}>
-              保存档案
+              {t('profile.save')}
             </Button>
           </Form.Item>
         </Form>

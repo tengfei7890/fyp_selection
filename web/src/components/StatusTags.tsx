@@ -1,11 +1,9 @@
 import { Tag } from 'antd';
+import { useTranslation } from 'react-i18next';
 import {
   TopicStatus,
-  TopicStatusLabels,
   ApplicationStatus,
-  ApplicationStatusLabels,
   SelectionMode,
-  SelectionModeLabels,
 } from '@shared/enums';
 
 const topicStatusColor: Record<TopicStatus, string> = {
@@ -31,13 +29,16 @@ const modeColor: Record<SelectionMode, string> = {
 };
 
 export function TopicStatusTag({ status }: { status: TopicStatus }) {
-  return <Tag color={topicStatusColor[status]}>{TopicStatusLabels[status]}</Tag>;
+  const { t } = useTranslation();
+  return <Tag color={topicStatusColor[status]}>{t('topicStatus.' + status)}</Tag>;
 }
 
 export function ApplicationStatusTag({ status }: { status: ApplicationStatus }) {
-  return <Tag color={appStatusColor[status]}>{ApplicationStatusLabels[status]}</Tag>;
+  const { t } = useTranslation();
+  return <Tag color={appStatusColor[status]}>{t('appStatus.' + status)}</Tag>;
 }
 
 export function SelectionModeTag({ mode }: { mode: SelectionMode }) {
-  return <Tag color={modeColor[mode]}>{SelectionModeLabels[mode]}</Tag>;
+  const { t } = useTranslation();
+  return <Tag color={modeColor[mode]}>{t('selectionMode.' + mode)}</Tag>;
 }

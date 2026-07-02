@@ -15,24 +15,16 @@ import {
   message,
 } from 'antd';
 import { useSearchParams, useNavigate } from 'react-router-dom';
-import { topicApi, applicationApi, type RangeCriteria } from '@/api';
-import type {
-  Topic,
-  Application,
-  Assignment,
-  StudentSearchItem,
-  Paginated,
-} from '@/types';
 import { MessageOutlined } from '@ant-design/icons';
+import { useTranslation } from 'react-i18next';
+import { topicApi, applicationApi, type RangeCriteria } from '@/api';
+import type { Topic, Application, Assignment, StudentSearchItem, Paginated } from '@/types';
 import StudentPickerModal from '@/components/StudentPickerModal';
-import {
-  TopicStatusTag,
-  SelectionModeTag,
-  ApplicationStatusTag,
-} from '@/components/StatusTags';
+import { TopicStatusTag, SelectionModeTag, ApplicationStatusTag } from '@/components/StatusTags';
 import { SelectionMode, ApplicationStatus } from '@shared/enums';
 
 export default function TeacherApplications() {
+  const { t } = useTranslation();
   const [searchParams] = useSearchParams();
   const navigate = useNavigate();
   const urlTopicId = searchParams.get('topicId');
@@ -49,18 +41,14 @@ export default function TeacherApplications() {
   const [rangeOpen, setRangeOpen] = useState(false);
   const [rangeForm] = Form.useForm();
 
-  // 加载教师自己的课题列表
   useEffect(() => {
     (async () => {
       try {
         const res: Paginated<Topic> = await topicApi.list({ page: 1, pageSize: 100 });
         setTopics(res.items);
         const fromUrl = urlTopicId ? Number(urlTopicId) : undefined;
-        if (fromUrl && res.items.some((t) => t.id === fromUrl)) {
-          setTopicId(fromUrl);
-        } else if (res.items.length) {
-          setTopicId(res.items[0].id);
-        }
+        if (fromUrl && res.items.some((tp) => tp.id === fromUrl)) setTopicId(fromUrl);
+        else if (res.items.length) setTopicId(res.items[0].id);
       } catch (err) {
         message.error((err as Error).message);
       }
@@ -68,20 +56,15 @@ export default function TeacherApplications() {
   }, [urlTopicId]);
 
   const loadDetail = useCallback(async () => {
-    if (!topicId) {
-      setTopic(null);
-      return;
-    }
+    if (!topicId) { setTopic(null); return; }
     setLoading(true);
     try {
-      const [t, a, asg] = await Promise.all([
+      const [tp, a, asg] = await Promise.all([
         topicApi.get(topicId),
         applicationApi.byTopic(topicId),
         topicApi.assignments(topicId),
       ]);
-      setTopic(t);
-      setApps(a);
-      setAssignments(asg);
+      setTopic(tp); setApps(a); setAssignments(asg);
     } catch (err) {
       message.error((err as Error).message);
     } finally {
@@ -89,101 +72,54 @@ export default function TeacherApplications() {
     }
   }, [topicId]);
 
-  useEffect(() => {
-    loadDetail();
-  }, [loadDetail]);
-
+  useEffect(() => { loadDetail(); }, [loadDetail]);
   const reload = () => loadDetail();
-
-  /* ----------------------------- 选题动作 ----------------------------- */
 
   const runRandom = async () => {
     setBusy(true);
     try {
       const r = await topicApi.select(topicId!, {});
-      message.success(`已随机确定 ${r.assigned} 人`);
+      message.success(t('teacherApp.msgRunRandom', { count: r.assigned }));
       reload();
-    } catch (err) {
-      message.error((err as Error).message);
-    } finally {
-      setBusy(false);
-    }
+    } catch (err) { message.error((err as Error).message); } finally { setBusy(false); }
   };
 
   const runRange = async () => {
     const values = await rangeForm.validateFields();
     setBusy(true);
     try {
-      const criteria: RangeCriteria = {
-        gpaMin: values.gpaMin ?? undefined,
-        majors: values.majors?.length ? values.majors : undefined,
-      };
+      const criteria: RangeCriteria = { gpaMin: values.gpaMin ?? undefined, majors: values.majors?.length ? values.majors : undefined };
       const r = await topicApi.select(topicId!, criteria);
-      message.success(`已在范围内随机确定 ${r.assigned} 人`);
-      setRangeOpen(false);
-      rangeForm.resetFields();
-      reload();
-    } catch (err) {
-      if ((err as Error).message) message.error((err as Error).message);
-    } finally {
-      setBusy(false);
-    }
+      message.success(t('teacherApp.msgRunRange', { count: r.assigned }));
+      setRangeOpen(false); rangeForm.resetFields(); reload();
+    } catch (err) { if ((err as Error).message) message.error((err as Error).message); } finally { setBusy(false); }
   };
 
   const doDirectAssign = async (students: StudentSearchItem[]) => {
     setPickerOpen(false);
     setBusy(true);
     try {
-      const r = await topicApi.assignDirect(
-        topicId!,
-        students.map((s) => s.id),
-      );
-      message.success(`已直接指定 ${r.assigned} 人${r.skipped ? `（${r.skipped} 人因容量/重复未计入）` : ''}`);
+      const r = await topicApi.assignDirect(topicId!, students.map((s) => s.id));
+      message.success(t('teacherApp.msgDirect', { count: r.assigned, skipped: r.skipped ? t('teacherApp.msgDirectSkipped', { count: r.skipped }) : '' }));
       reload();
-    } catch (err) {
-      message.error((err as Error).message);
-    } finally {
-      setBusy(false);
-    }
+    } catch (err) { message.error((err as Error).message); } finally { setBusy(false); }
   };
 
   const accept = async (id: number) => {
     setBusy(true);
-    try {
-      await applicationApi.accept(id);
-      message.success('已通过该申请');
-      reload();
-    } catch (err) {
-      message.error((err as Error).message);
-    } finally {
-      setBusy(false);
-    }
+    try { await applicationApi.accept(id); message.success(t('teacherApp.msgAccept')); reload(); }
+    catch (err) { message.error((err as Error).message); } finally { setBusy(false); }
   };
-
   const reject = async (id: number) => {
     setBusy(true);
-    try {
-      await applicationApi.reject(id);
-      message.success('已拒绝该申请');
-      reload();
-    } catch (err) {
-      message.error((err as Error).message);
-    } finally {
-      setBusy(false);
-    }
+    try { await applicationApi.reject(id); message.success(t('teacherApp.msgReject')); reload(); }
+    catch (err) { message.error((err as Error).message); } finally { setBusy(false); }
   };
 
   const clear = async () => {
     setBusy(true);
-    try {
-      await topicApi.clearAssignments(topicId!);
-      message.success('已清空结果，可重新选题');
-      reload();
-    } catch (err) {
-      message.error((err as Error).message);
-    } finally {
-      setBusy(false);
-    }
+    try { await topicApi.clearAssignments(topicId!); message.success(t('teacherApp.msgClear')); reload(); }
+    catch (err) { message.error((err as Error).message); } finally { setBusy(false); }
   };
 
   const assignedCount = assignments.length;
@@ -194,69 +130,41 @@ export default function TeacherApplications() {
   return (
     <div className="page-container">
       <Card
-        title="申请管理与选题"
+        title={t('teacherApp.title')}
         extra={
           <Select
             style={{ width: 320 }}
-            placeholder="选择课题"
+            placeholder={t('teacherApp.selectPlaceholder')}
             value={topicId}
             onChange={setTopicId}
-            options={topics.map((t) => ({
-              label: `${t.title}（申请 ${t._count?.applications ?? 0}）`,
-              value: t.id,
-            }))}
+            options={topics.map((tp) => ({ label: `${tp.title}（${t('teacherApp.topicApplied', { count: tp._count?.applications ?? 0 })}）`, value: tp.id }))}
           />
         }
       >
         {!topic ? (
-          <Empty description="请选择课题" />
+          <Empty description={t('teacherApp.selectPlaceholder')} />
         ) : (
           <>
             <Descriptions size="small" bordered column={4} style={{ marginBottom: 16 }}>
-              <Descriptions.Item label="选题模式">
-                <SelectionModeTag mode={mode!} />
-              </Descriptions.Item>
-              <Descriptions.Item label="状态">
-                <TopicStatusTag status={topic.status} />
-              </Descriptions.Item>
-              <Descriptions.Item label="容量">{capacity}</Descriptions.Item>
-              <Descriptions.Item label="已定稿">
-                {assignedCount} {isFull && <Tag color="green">已满员</Tag>}
-              </Descriptions.Item>
+              <Descriptions.Item label={t('browse.colMode')}><SelectionModeTag mode={mode!} /></Descriptions.Item>
+              <Descriptions.Item label={t('common.status')}><TopicStatusTag status={topic.status} /></Descriptions.Item>
+              <Descriptions.Item label={t('teacherApp.capacity')}>{capacity}</Descriptions.Item>
+              <Descriptions.Item label={t('teacherApp.assigned')}>{assignedCount} {isFull && <Tag color="green">{t('teacherApp.full')}</Tag>}</Descriptions.Item>
             </Descriptions>
 
             <Space wrap style={{ marginBottom: 16 }}>
-              {mode === SelectionMode.MUTUAL && (
-                <span style={{ color: '#888' }}>双向互选：在下方申请人列表逐条「通过/拒绝」。</span>
-              )}
-              {mode === SelectionMode.RANDOM && (
-                <Button type="primary" loading={busy} disabled={isFull} onClick={runRandom}>
-                  执行随机选题
-                </Button>
-              )}
-              {mode === SelectionMode.RANGE_RANDOM && (
-                <Button type="primary" loading={busy} disabled={isFull} onClick={() => setRangeOpen(true)}>
-                  执行范围随机
-                </Button>
-              )}
-              {mode === SelectionMode.DIRECT && (
-                <Button type="primary" loading={busy} disabled={isFull} onClick={() => setPickerOpen(true)}>
-                  直接指定学生
-                </Button>
-              )}
+              {mode === SelectionMode.MUTUAL && <span style={{ color: '#888' }}>{t('teacherApp.mutualHint')}</span>}
+              {mode === SelectionMode.RANDOM && <Button type="primary" loading={busy} disabled={isFull} onClick={runRandom}>{t('teacherApp.runRandom')}</Button>}
+              {mode === SelectionMode.RANGE_RANDOM && <Button type="primary" loading={busy} disabled={isFull} onClick={() => setRangeOpen(true)}>{t('teacherApp.runRange')}</Button>}
+              {mode === SelectionMode.DIRECT && <Button type="primary" loading={busy} disabled={isFull} onClick={() => setPickerOpen(true)}>{t('teacherApp.directPick')}</Button>}
               {assignedCount > 0 && (
-                <Popconfirm
-                  title="清空该课题全部选题结果并重新选择？"
-                  onConfirm={clear}
-                >
-                  <Button danger loading={busy}>
-                    清空结果（重选）
-                  </Button>
+                <Popconfirm title={t('teacherApp.clearConfirm')} onConfirm={clear}>
+                  <Button danger loading={busy}>{t('teacherApp.clear')}</Button>
                 </Popconfirm>
               )}
             </Space>
 
-            <Card type="inner" title={`申请人（${apps.length}）`} size="small" style={{ marginBottom: 16 }}>
+            <Card type="inner" title={t('teacherApp.applicants', { count: apps.length })} size="small" style={{ marginBottom: 16 }}>
               <Table
                 rowKey="id"
                 loading={loading}
@@ -264,78 +172,48 @@ export default function TeacherApplications() {
                 pagination={false}
                 size="small"
                 scroll={{ y: 260 }}
-                locale={{ emptyText: '暂无申请人' }}
+                locale={{ emptyText: t('teacherApp.noApplicants') }}
                 columns={[
-                  { title: '学生', render: (_: unknown, a: Application) => a.student?.name ?? '-' },
-                  { title: '专业', render: (_: unknown, a: Application) => a.student?.studentProfile?.major ?? '-' },
-                  { title: 'GPA', width: 70, render: (_: unknown, a: Application) => a.student?.studentProfile?.gpa ?? '-' },
+                  { title: t('teacherApp.colStudent'), render: (_: unknown, a: Application) => a.student?.name ?? '-' },
+                  { title: t('teacherApp.colMajor'), render: (_: unknown, a: Application) => a.student?.studentProfile?.major ?? '-' },
+                  { title: t('teacherApp.colGpa'), width: 70, render: (_: unknown, a: Application) => a.student?.studentProfile?.gpa ?? '-' },
                   {
-                    title: '符合要求',
+                    title: t('teacherApp.colEligible'),
                     width: 90,
-                    render: (_: unknown, a: Application) =>
-                      a.eligible === undefined ? (
-                        '-'
-                      ) : a.eligible ? (
-                        <Tag color="green">合格</Tag>
-                      ) : (
-                        <Tag color="red">不合格</Tag>
-                      ),
+                    render: (_: unknown, a: Application) => (a.eligible === undefined ? '-' : a.eligible ? <Tag color="green">{t('teacherApp.eligible')}</Tag> : <Tag color="red">{t('teacherApp.ineligible')}</Tag>),
                   },
                   {
-                    title: '技能',
-                    render: (_: unknown, a: Application) =>
-                      (a.student?.studentProfile?.skills ?? []).map((s) => (
-                        <Tag key={s.skillId}>{s.skill.name}</Tag>
-                      )),
+                    title: t('teacherApp.colSkills'),
+                    render: (_: unknown, a: Application) => (a.student?.studentProfile?.skills ?? []).map((s) => <Tag key={s.skillId}>{s.skill.name}</Tag>),
                   },
-                  { title: '留言', dataIndex: 'message', ellipsis: true, render: (m: string) => m || '-' },
+                  { title: t('teacherApp.colMessage'), dataIndex: 'message', ellipsis: true, render: (m: string) => m || '-' },
                   {
-                    title: '状态',
+                    title: t('teacherApp.colStatus'),
                     width: 120,
                     render: (_: unknown, a: Application) => {
                       if (a.status === ApplicationStatus.REJECTED) {
                         if (a.rejectReason === 'cascade') {
                           const otherTopic = a.student?.assignments?.[0]?.topic?.title;
-                          return (
-                            <Tag
-                              color="orange"
-                              title={otherTopic ? `该生已确定：${otherTopic}` : undefined}
-                            >
-                              已选其他课题
-                            </Tag>
-                          );
+                          return <Tag color="orange" title={otherTopic ? t('messages.topicBubble', { title: otherTopic }) : undefined}>{t('appRejectReason.cascade')}</Tag>;
                         }
-                        return <Tag color="red">教师拒绝</Tag>;
+                        return <Tag color="red">{t('appRejectReason.manual')}</Tag>;
                       }
                       return <ApplicationStatusTag status={a.status} />;
                     },
                   },
                   {
-                    title: '操作',
+                    title: t('common.action'),
                     width: 190,
                     render: (_: unknown, a: Application) => (
                       <Space size="small" wrap>
                         {a.status === ApplicationStatus.PENDING && (
                           <>
-                            <Button size="small" type="primary" loading={busy} onClick={() => accept(a.id)}>
-                              通过
-                            </Button>
-                            <Button size="small" danger loading={busy} onClick={() => reject(a.id)}>
-                              拒绝
-                            </Button>
+                            <Button size="small" type="primary" loading={busy} onClick={() => accept(a.id)}>{t('teacherApp.accept')}</Button>
+                            <Button size="small" danger loading={busy} onClick={() => reject(a.id)}>{t('teacherApp.reject')}</Button>
                           </>
                         )}
-                        <Button
-                          size="small"
-                          type="link"
-                          icon={<MessageOutlined />}
-                          onClick={() =>
-                            navigate(
-                              `/teacher/messages?partnerId=${a.studentId}&partnerName=${encodeURIComponent(a.student?.name ?? '')}&topicId=${topicId}`,
-                            )
-                          }
-                        >
-                          联系
+                        <Button size="small" type="link" icon={<MessageOutlined />} onClick={() => navigate(`/teacher/messages?partnerId=${a.studentId}&partnerName=${encodeURIComponent(a.student?.name ?? '')}&topicId=${topicId}`)}>
+                          {t('teacherApp.contact')}
                         </Button>
                       </Space>
                     ),
@@ -344,26 +222,18 @@ export default function TeacherApplications() {
               />
             </Card>
 
-            <Card
-              type="inner"
-              title={`已定稿名单（${assignedCount}/${capacity}）`}
-              size="small"
-            >
+            <Card type="inner" title={t('teacherApp.results', { assigned: assignedCount, capacity })} size="small">
               <Table
                 rowKey="id"
                 dataSource={assignments}
                 pagination={false}
                 size="small"
-                locale={{ emptyText: '尚未确定人选' }}
+                locale={{ emptyText: t('teacherApp.noResults') }}
                 columns={[
-                  { title: '学生', render: (_: unknown, a: Assignment) => a.student?.name ?? '-' },
-                  { title: '用户名', render: (_: unknown, a: Assignment) => a.student?.username ?? '-' },
-                  {
-                    title: '方式',
-                    dataIndex: 'method',
-                    render: (m: Assignment['method']) => <SelectionModeTag mode={m} />,
-                  },
-                  { title: '确定时间', dataIndex: 'createdAt', render: (t: string) => new Date(t).toLocaleString() },
+                  { title: t('teacherApp.colStudent'), render: (_: unknown, a: Assignment) => a.student?.name ?? '-' },
+                  { title: t('adminUsers.colUsername'), render: (_: unknown, a: Assignment) => a.student?.username ?? '-' },
+                  { title: t('adminAssignments.colMode'), dataIndex: 'method', render: (m: Assignment['method']) => <SelectionModeTag mode={m} /> },
+                  { title: t('adminAssignments.colTime'), dataIndex: 'createdAt', render: (tm: string) => new Date(tm).toLocaleString() },
                 ]}
               />
             </Card>
@@ -371,32 +241,17 @@ export default function TeacherApplications() {
         )}
       </Card>
 
-      <StudentPickerModal
-        open={pickerOpen}
-        excludeIds={assignments.map((a) => a.studentId)}
-        onClose={() => setPickerOpen(false)}
-        onConfirm={doDirectAssign}
-      />
+      <StudentPickerModal open={pickerOpen} excludeIds={assignments.map((a) => a.studentId)} onClose={() => setPickerOpen(false)} onConfirm={doDirectAssign} />
 
-      <Modal
-        title="范围随机 — 设置筛选条件"
-        open={rangeOpen}
-        onOk={runRange}
-        onCancel={() => setRangeOpen(false)}
-        confirmLoading={busy}
-        okText="在范围内随机"
-        destroyOnClose
-      >
+      <Modal title={t('teacherApp.rangeTitle')} open={rangeOpen} onOk={runRange} onCancel={() => setRangeOpen(false)} confirmLoading={busy} okText={t('teacherApp.rangeOk')} destroyOnClose>
         <Form form={rangeForm} layout="vertical">
-          <Form.Item label="GPA 下限（留空不限）" name="gpaMin">
-            <InputNumber min={0} max={5} step={0.1} style={{ width: '100%' }} placeholder="如 3.5" />
+          <Form.Item label={t('teacherApp.rangeGpa')} name="gpaMin">
+            <InputNumber min={0} max={5} step={0.1} style={{ width: '100%' }} placeholder="3.5" />
           </Form.Item>
-          <Form.Item label="限定专业（输入后回车，可多个）" name="majors">
-            <Select mode="tags" placeholder="如 软件工程" tokenSeparators={[',', ' ']} />
+          <Form.Item label={t('teacherApp.rangeMajor')} name="majors">
+            <Select mode="tags" tokenSeparators={[',', ' ']} />
           </Form.Item>
-          <p style={{ color: '#888', margin: 0 }}>
-            将在「满足课题要求」的申请人中，按上述条件筛选后随机抽取至满员。
-          </p>
+          <p style={{ color: '#888', margin: 0 }}>{t('teacherApp.rangeHint')}</p>
         </Form>
       </Modal>
     </div>

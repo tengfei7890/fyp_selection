@@ -14,14 +14,13 @@ import {
   Result,
 } from 'antd';
 import { StarFilled, StarOutlined, ArrowLeftOutlined, MessageOutlined } from '@ant-design/icons';
+import { useTranslation } from 'react-i18next';
 import { topicApi, favoriteApi, applicationApi } from '@/api';
 import type { Topic, Application, Favorite } from '@/types';
-import {
-  TopicStatusTag,
-  SelectionModeTag,
-} from '@/components/StatusTags';
+import { TopicStatusTag, SelectionModeTag } from '@/components/StatusTags';
 
 export default function TopicDetail() {
+  const { t } = useTranslation();
   const { id } = useParams<{ id: string }>();
   const topicId = Number(id);
   const navigate = useNavigate();
@@ -37,12 +36,12 @@ export default function TopicDetail() {
   const load = useCallback(async () => {
     setLoading(true);
     try {
-      const [t, favs, apps] = await Promise.all([
+      const [tp, favs, apps] = await Promise.all([
         topicApi.get(topicId),
         favoriteApi.mine(),
         applicationApi.mine(),
       ]);
-      setTopic(t);
+      setTopic(tp);
       setFavorites(favs);
       setApplications(apps);
     } catch (err) {
@@ -61,8 +60,8 @@ export default function TopicDetail() {
     return (
       <Result
         status="404"
-        title="课题不存在"
-        extra={<Button onClick={() => navigate('/student')}>返回列表</Button>}
+        title={t('topicDetail.notFound')}
+        extra={<Button onClick={() => navigate('/student')}>{t('topicDetail.back')}</Button>}
       />
     );
 
@@ -74,11 +73,9 @@ export default function TopicDetail() {
       if (isFavorited) {
         await favoriteApi.remove(topicId);
         setFavorites((prev) => prev.filter((f) => f.topicId !== topicId));
-        message.success('已取消收藏');
       } else {
         await favoriteApi.create(topicId);
         setFavorites((prev) => [...prev, { studentId: 0, topicId, createdAt: '', topic }]);
-        message.success('已收藏');
       }
     } catch (err) {
       message.error((err as Error).message);
@@ -90,7 +87,7 @@ export default function TopicDetail() {
     setSubmitting(true);
     try {
       await applicationApi.create(topicId, values.message);
-      message.success('申请已提交');
+      message.success(t('common.success'));
       setApplyOpen(false);
       form.resetFields();
       load();
@@ -103,29 +100,22 @@ export default function TopicDetail() {
 
   return (
     <div className="page-container">
-      <Button
-        icon={<ArrowLeftOutlined />}
-        style={{ marginBottom: 16 }}
-        onClick={() => navigate('/student')}
-      >
-        返回列表
+      <Button icon={<ArrowLeftOutlined />} style={{ marginBottom: 16 }} onClick={() => navigate('/student')}>
+        {t('topicDetail.back')}
       </Button>
       <Card
         title={topic.title}
         extra={
           <Space>
-            <Button
-              icon={isFavorited ? <StarFilled style={{ color: '#faad14' }} /> : <StarOutlined />}
-              onClick={toggleFavorite}
-            >
-              {isFavorited ? '已收藏' : '收藏'}
+            <Button icon={isFavorited ? <StarFilled style={{ color: '#faad14' }} /> : <StarOutlined />} onClick={toggleFavorite}>
+              {isFavorited ? t('topicDetail.favorited') : t('topicDetail.favorite')}
             </Button>
-            <Button
-              type="primary"
-              disabled={!!myApp}
-              onClick={() => setApplyOpen(true)}
-            >
-              {myApp ? `已申请（${myApp.status === 'PENDING' ? '待处理' : myApp.status}）` : '申请该课题'}
+            <Button type="primary" disabled={!!myApp} onClick={() => setApplyOpen(true)}>
+              {myApp
+                ? t('topicDetail.applied', {
+                    status: myApp.status === 'PENDING' ? t('topicDetail.appliedPending') : myApp.status,
+                  })
+                : t('topicDetail.apply')}
             </Button>
             <Button
               icon={<MessageOutlined />}
@@ -135,49 +125,42 @@ export default function TopicDetail() {
                 )
               }
             >
-              联系教师
+              {t('topicDetail.contactTeacher')}
             </Button>
           </Space>
         }
       >
         <p style={{ whiteSpace: 'pre-wrap', color: '#555' }}>{topic.description}</p>
-
         <Descriptions column={2} bordered size="small" style={{ marginTop: 16 }}>
-          <Descriptions.Item label="指导教师">{topic.teacher?.name}</Descriptions.Item>
-          <Descriptions.Item label="容量">{topic.capacity} 人</Descriptions.Item>
-          <Descriptions.Item label="选题模式">
-            <SelectionModeTag mode={topic.selectionMode} />
+          <Descriptions.Item label={t('topicDetail.teacher')}>{topic.teacher?.name}</Descriptions.Item>
+          <Descriptions.Item label={t('topicDetail.capacity')}>{topic.capacity} {t('topicDetail.capacityUnit')}</Descriptions.Item>
+          <Descriptions.Item label={t('topicDetail.mode')}><SelectionModeTag mode={topic.selectionMode} /></Descriptions.Item>
+          <Descriptions.Item label={t('topicDetail.status')}><TopicStatusTag status={topic.status} /></Descriptions.Item>
+          <Descriptions.Item label={t('topicDetail.gpaReq')}>
+            {topic.gpaThreshold ? t('topicDetail.gpaMin', { value: topic.gpaThreshold }) : t('topicDetail.gpaAny')}
           </Descriptions.Item>
-          <Descriptions.Item label="状态">
-            <TopicStatusTag status={topic.status} />
-          </Descriptions.Item>
-          <Descriptions.Item label="GPA 要求">
-            {topic.gpaThreshold ? `≥ ${topic.gpaThreshold}` : '不限'}
-          </Descriptions.Item>
-          <Descriptions.Item label="专业要求">{topic.majorRestriction || '不限'}</Descriptions.Item>
-          <Descriptions.Item label="技能要求" span={2}>
+          <Descriptions.Item label={t('topicDetail.majorReq')}>{topic.majorRestriction || t('topicDetail.majorAny')}</Descriptions.Item>
+          <Descriptions.Item label={t('topicDetail.skillReq')} span={2}>
             {topic.requirements?.length
               ? topic.requirements.map((r) => <Tag key={r.skill.id}>{r.skill.name}</Tag>)
-              : '不限'}
+              : t('topicDetail.skillAny')}
           </Descriptions.Item>
-          <Descriptions.Item label="学年" span={2}>
-            {topic.academicYear || '-'}
-          </Descriptions.Item>
+          <Descriptions.Item label={t('topicDetail.year')} span={2}>{topic.academicYear || '-'}</Descriptions.Item>
         </Descriptions>
       </Card>
 
       <Modal
-        title="申请课题"
+        title={t('topicDetail.applyTitle')}
         open={applyOpen}
         onOk={submitApply}
         onCancel={() => setApplyOpen(false)}
         confirmLoading={submitting}
-        okText="提交申请"
+        okText={t('topicDetail.submit')}
       >
-        <p>你正在申请《{topic.title}》，可附上一段简短留言：</p>
+        <p>{t('topicDetail.applyBody', { title: topic.title })}</p>
         <Form form={form}>
           <Form.Item name="message">
-            <Input.TextArea rows={4} maxLength={500} placeholder="向老师介绍你的背景与意向（选填）" />
+            <Input.TextArea rows={4} maxLength={500} placeholder={t('topicDetail.applyPlaceholder')} />
           </Form.Item>
         </Form>
       </Modal>

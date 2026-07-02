@@ -19,18 +19,18 @@ export async function create(req: Request, res: Response) {
   const myAssignment = await prisma.assignment.findUnique({
     where: { studentId },
   });
-  if (myAssignment) throw new ApiError(409, '你已有选题，无法再申请');
+  if (myAssignment) throw new ApiError(409, '你已有选题，无法再申请', 'ALREADY_ASSIGNED');
 
   const topic = await prisma.topic.findUnique({ where: { id: topicId } });
-  if (!topic) throw new ApiError(404, '课题不存在');
+  if (!topic) throw new ApiError(404, '课题不存在', 'NOT_FOUND');
   if (!([TopicStatus.OPEN, TopicStatus.SELECTING] as TopicStatus[]).includes(topic.status)) {
-    throw new ApiError(400, '该课题当前不接受申请');
+    throw new ApiError(400, '该课题当前不接受申请', 'TOPIC_NOT_OPEN');
   }
 
   const existing = await prisma.application.findUnique({
     where: { studentId_topicId: { studentId, topicId } },
   });
-  if (existing) throw new ApiError(409, '你已申请过该课题');
+  if (existing) throw new ApiError(409, '你已申请过该课题', 'DUPLICATE_APPLICATION');
 
   const application = await prisma.application.create({
     data: { studentId, topicId, message },
@@ -41,7 +41,7 @@ export async function create(req: Request, res: Response) {
   await notify(
     topic.teacherId,
     NotificationType.NEW_APPLICATION,
-    `收到 ${req.user!.name} 对《${topic.title}》的新申请`,
+    { studentName: req.user!.name, topicTitle: topic.title },
     'topic',
     topicId,
   );
@@ -75,9 +75,9 @@ export async function listByTopic(req: Request, res: Response) {
     where: { id: topicId },
     include: { requirements: true },
   });
-  if (!topic) throw new ApiError(404, '课题不存在');
+  if (!topic) throw new ApiError(404, '课题不存在', 'NOT_FOUND');
   if (req.user!.role === Role.TEACHER && topic.teacherId !== req.user!.id) {
-    throw new ApiError(403, '无权查看该课题的申请人');
+    throw new ApiError(403, '无权查看该课题的申请人', 'FORBIDDEN');
   }
 
   const applications = await prisma.application.findMany({
@@ -126,9 +126,9 @@ export async function listByTopic(req: Request, res: Response) {
 export async function withdraw(req: Request, res: Response) {
   const id = parseInt(req.params.id, 10);
   const application = await prisma.application.findUnique({ where: { id } });
-  if (!application) throw new ApiError(404, '申请不存在');
+  if (!application) throw new ApiError(404, '申请不存在', 'NOT_FOUND');
   if (application.studentId !== req.user!.id) {
-    throw new ApiError(403, '无权操作该申请');
+    throw new ApiError(403, '无权操作该申请', 'FORBIDDEN');
   }
 
   const updated = await prisma.application.update({

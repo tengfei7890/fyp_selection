@@ -1,11 +1,13 @@
 import { useEffect, useState, useCallback } from 'react';
 import { Table, Input, Card, Space, Button, Select, Switch, Tooltip } from 'antd';
 import { Link } from 'react-router-dom';
+import { useTranslation } from 'react-i18next';
 import { topicApi, skillApi } from '@/api';
 import type { Topic, Skill, Paginated } from '@/types';
 import { TopicStatusTag, SelectionModeTag } from '@/components/StatusTags';
 
 export default function Browse() {
+  const { t } = useTranslation();
   const [data, setData] = useState<Paginated<Topic>>({ items: [], total: 0, page: 1, pageSize: 10 });
   const [skills, setSkills] = useState<Skill[]>([]);
   const [q, setQ] = useState('');
@@ -36,13 +38,10 @@ export default function Browse() {
 
   return (
     <div className="page-container">
-      <Card
-        title="浏览课题"
-        extra={<Button onClick={load}>刷新</Button>}
-      >
+      <Card title={t('browse.title')} extra={<Button onClick={load}>{t('common.refresh')}</Button>}>
         <Space wrap style={{ marginBottom: 16 }}>
           <Input.Search
-            placeholder="搜索课题标题或描述"
+            placeholder={t('browse.searchPlaceholder')}
             allowClear
             style={{ width: 240 }}
             onSearch={(v) => {
@@ -52,7 +51,7 @@ export default function Browse() {
           />
           <Select
             allowClear
-            placeholder="按要求技能筛选"
+            placeholder={t('browse.skillFilter')}
             style={{ width: 200 }}
             value={skillId}
             onChange={(v) => {
@@ -64,7 +63,7 @@ export default function Browse() {
             options={skills.map((s) => ({ label: s.name, value: s.id }))}
           />
           <Input.Search
-            placeholder="按专业要求筛选"
+            placeholder={t('browse.majorFilter')}
             allowClear
             style={{ width: 200 }}
             onSearch={(v) => {
@@ -72,7 +71,7 @@ export default function Browse() {
               setPage(1);
             }}
           />
-          <Tooltip title="按你的 GPA / 专业 / 技能过滤出符合要求的课题">
+          <Tooltip title={t('browse.eligibleOnlyTip')}>
             <Space size={4}>
               <Switch
                 checked={eligibleOnly}
@@ -81,7 +80,7 @@ export default function Browse() {
                   setPage(1);
                 }}
               />
-              <span>只看我符合条件的</span>
+              <span>{t('browse.eligibleOnly')}</span>
             </Space>
           </Tooltip>
         </Space>
@@ -94,50 +93,50 @@ export default function Browse() {
             pageSize,
             total: data.total,
             onChange: setPage,
-            showTotal: (t) => `共 ${t} 个课题`,
+            showTotal: (n) => t('browse.total', { count: n }),
           }}
           columns={[
             {
-              title: '课题标题',
+              title: t('browse.colTitle'),
               dataIndex: 'title',
               render: (title: string, record: Topic) => (
                 <Link to={`/student/topics/${record.id}`}>{title}</Link>
               ),
             },
             {
-              title: '指导教师',
+              title: t('browse.colTeacher'),
               render: (_: unknown, r: Topic) => r.teacher?.name ?? '-',
             },
-            { title: '容量', dataIndex: 'capacity', width: 70 },
+            { title: t('browse.colCapacity'), dataIndex: 'capacity', width: 70 },
             {
-              title: '选题模式',
+              title: t('browse.colMode'),
               dataIndex: 'selectionMode',
               width: 110,
               render: (m: Topic['selectionMode']) => <SelectionModeTag mode={m} />,
             },
             {
-              title: '技能要求',
+              title: t('browse.colSkills'),
               render: (_: unknown, r: Topic) =>
                 r.requirements?.length
                   ? r.requirements.map((req) => <span key={req.skill.id}>{req.skill.name} </span>)
-                  : '不限',
+                  : t('browse.skillAny'),
             },
             {
-              title: '已申请',
+              title: t('browse.colApplied'),
               width: 80,
               render: (_: unknown, r: Topic) => r._count?.applications ?? 0,
             },
             {
-              title: '状态',
+              title: t('browse.colStatus'),
               dataIndex: 'status',
               width: 100,
               render: (s: Topic['status']) => <TopicStatusTag status={s} />,
             },
             {
-              title: '操作',
+              title: t('browse.colAction'),
               width: 90,
               render: (_: unknown, r: Topic) => (
-                <Link to={`/student/topics/${r.id}`}>查看详情</Link>
+                <Link to={`/student/topics/${r.id}`}>{t('common.viewDetail')}</Link>
               ),
             },
           ]}

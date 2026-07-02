@@ -1,4 +1,8 @@
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
+import { ConfigProvider } from 'antd';
+import zhCN from 'antd/locale/zh_CN';
+import enUS from 'antd/locale/en_US';
+import { useTranslation } from 'react-i18next';
 import { AuthProvider, useAuth, FullScreenLoading } from '@/contexts/AuthContext';
 import { ProtectedRoute, homePath } from '@/components/ProtectedRoute';
 import RoleLayout from '@/components/RoleLayout';
@@ -29,7 +33,10 @@ function RootRedirect() {
 }
 
 export default function App() {
+  const { i18n } = useTranslation();
+  const locale = i18n.language?.toLowerCase().startsWith('en') ? enUS : zhCN;
   return (
+    <ConfigProvider locale={locale}>
     <BrowserRouter>
       <AuthProvider>
         <Routes>
@@ -91,5 +98,6 @@ export default function App() {
         </Routes>
       </AuthProvider>
     </BrowserRouter>
+    </ConfigProvider>
   );
 }

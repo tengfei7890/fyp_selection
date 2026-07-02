@@ -1,34 +1,23 @@
 import { useEffect, useState } from 'react';
-import { Modal, Form, Input, InputNumber, Select, message } from 'antd';
+import { Modal, Form, Input, InputNumber, Select, Space, message } from 'antd';
+import { useTranslation } from 'react-i18next';
 import { topicApi, type TopicInput } from '@/api';
 import type { Topic, Skill } from '@/types';
 import {
   SelectionMode,
-  SelectionModeLabels,
   TopicStatus,
-  TopicStatusLabels,
 } from '@shared/enums';
 
 interface Props {
   open: boolean;
-  /** 传入课题=编辑；null=新建 */
   topic: Topic | null;
   skills: Skill[];
   onClose: () => void;
   onSaved: () => void;
 }
 
-/**
- * 课题新建/编辑表单弹窗（教师新建、教师/管理员编辑共用）。
- * 管理员编辑走 topicApi.update（后端已放行 ADMIN）。
- */
-export default function TopicFormModal({
-  open,
-  topic,
-  skills,
-  onClose,
-  onSaved,
-}: Props) {
+export default function TopicFormModal({ open, topic, skills, onClose, onSaved }: Props) {
+  const { t } = useTranslation();
   const [saving, setSaving] = useState(false);
   const [form] = Form.useForm<TopicInput>();
 
@@ -62,7 +51,7 @@ export default function TopicFormModal({
     try {
       values = await form.validateFields();
     } catch {
-      return; // 字段校验失败，antd 已在字段下提示
+      return;
     }
     setSaving(true);
     try {
@@ -74,10 +63,10 @@ export default function TopicFormModal({
       };
       if (topic) {
         await topicApi.update(topic.id, payload);
-        message.success('课题已更新');
+        message.success(t('common.updated'));
       } else {
         await topicApi.create(payload);
-        message.success('课题已创建');
+        message.success(t('common.created'));
       }
       onSaved();
       onClose();
@@ -90,44 +79,48 @@ export default function TopicFormModal({
 
   return (
     <Modal
-      title={topic ? '编辑课题' : '新建课题'}
+      title={topic ? t('myTopics.editTitle') : t('myTopics.createTitle')}
       open={open}
       onOk={submit}
       onCancel={onClose}
       confirmLoading={saving}
       width={640}
-      okText="保存"
+      okText={t('common.save')}
       destroyOnClose
     >
       <Form form={form} layout="vertical">
-        <Form.Item label="课题标题" name="title" rules={[{ required: true, message: '请输入标题' }]}>
+        <Form.Item label={t('myTopics.fTitle')} name="title" rules={[{ required: true, message: t('myTopics.requireTitle') }]}>
           <Input maxLength={100} />
         </Form.Item>
-        <Form.Item label="课题描述" name="description" rules={[{ required: true, message: '请输入描述' }]}>
+        <Form.Item label={t('myTopics.fDesc')} name="description" rules={[{ required: true, message: t('myTopics.requireDesc') }]}>
           <Input.TextArea rows={4} maxLength={2000} />
         </Form.Item>
-        <Form.Item label="选题模式" name="selectionMode">
-          <Select options={Object.values(SelectionMode).map((m) => ({ label: SelectionModeLabels[m], value: m }))} />
+        <Space wrap>
+          <Form.Item label={t('myTopics.fMode')} name="selectionMode" style={{ width: 160 }}>
+            <Select options={Object.values(SelectionMode).map((m) => ({ label: t('selectionMode.' + m), value: m }))} />
+          </Form.Item>
+          <Form.Item label={t('myTopics.fCapacity')} name="capacity" rules={[{ required: true }]} style={{ width: 140 }}>
+            <InputNumber min={1} max={20} style={{ width: '100%' }} />
+          </Form.Item>
+          <Form.Item label={t('myTopics.fStatus')} name="status" style={{ width: 140 }}>
+            <Select options={Object.values(TopicStatus).map((s) => ({ label: t('topicStatus.' + s), value: s }))} />
+          </Form.Item>
+        </Space>
+        <Space wrap>
+          <Form.Item label={t('myTopics.fGpa')} name="gpaThreshold" style={{ width: 200 }}>
+            <InputNumber min={0} max={5} step={0.1} style={{ width: '100%' }} placeholder={t('myTopics.fGpaPlaceholder')} />
+          </Form.Item>
+          <Form.Item label={t('myTopics.fYear')} name="academicYear" style={{ width: 200 }}>
+            <Input placeholder={t('myTopics.fYearPlaceholder')} />
+          </Form.Item>
+        </Space>
+        <Form.Item label={t('myTopics.fMajor')} name="majorRestriction">
+          <Input placeholder={t('myTopics.fMajorPlaceholder')} />
         </Form.Item>
-        <Form.Item label="容量（人数）" name="capacity" rules={[{ required: true }]}>
-          <InputNumber min={1} max={20} style={{ width: '100%' }} />
-        </Form.Item>
-        <Form.Item label="状态" name="status">
-          <Select options={Object.values(TopicStatus).map((s) => ({ label: TopicStatusLabels[s], value: s }))} />
-        </Form.Item>
-        <Form.Item label="GPA 阈值（0-5，留空不限）" name="gpaThreshold">
-          <InputNumber min={0} max={5} step={0.1} style={{ width: '100%' }} placeholder="如 3.5" />
-        </Form.Item>
-        <Form.Item label="专业要求（逗号分隔，留空不限）" name="majorRestriction">
-          <Input placeholder="如 计算机科学与技术,软件工程" />
-        </Form.Item>
-        <Form.Item label="学年" name="academicYear">
-          <Input placeholder="如 2025-2026" />
-        </Form.Item>
-        <Form.Item label="技能要求（可多选）" name="skillIds">
+        <Form.Item label={t('myTopics.fSkills')} name="skillIds">
           <Select
             mode="multiple"
-            placeholder="选择课题要求的技能"
+            placeholder={t('myTopics.fSkillsPlaceholder')}
             optionFilterProp="label"
             options={skills.map((s) => ({ label: s.name, value: s.id }))}
           />

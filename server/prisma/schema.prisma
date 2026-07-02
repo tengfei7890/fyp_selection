@@ -238,6 +238,8 @@ model Notification {
   userId    Int              @map("user_id")
   type      NotificationType
   content   String           @db.Text
+  // 结构化参数，供前端按 type + params 渲染本地化文案
+  params    Json?            @map("params")
   refType   String?          @map("ref_type") @db.VarChar(32) // topic/application/assignment
   refId     Int?             @map("ref_id")
   readAt    DateTime?        @map("read_at")

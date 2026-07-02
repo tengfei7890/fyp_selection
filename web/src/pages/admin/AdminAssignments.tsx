@@ -13,6 +13,7 @@ import {
   Tag,
 } from 'antd';
 import { PlusOutlined } from '@ant-design/icons';
+import { useTranslation } from 'react-i18next';
 import { adminApi, topicApi, userApi } from '@/api';
 import type { Assignment, Topic, StudentSearchItem, Paginated } from '@/types';
 import { SelectionModeTag } from '@/components/StatusTags';
@@ -20,16 +21,11 @@ import { SelectionModeTag } from '@/components/StatusTags';
 type ModalMode = 'create' | 'edit' | null;
 
 export default function AdminAssignments() {
-  const [data, setData] = useState<Paginated<Assignment>>({
-    items: [],
-    total: 0,
-    page: 1,
-    pageSize: 10,
-  });
+  const { t } = useTranslation();
+  const [data, setData] = useState<Paginated<Assignment>>({ items: [], total: 0, page: 1, pageSize: 10 });
   const [topics, setTopics] = useState<Topic[]>([]);
   const [loading, setLoading] = useState(false);
   const [page, setPage] = useState(1);
-
   const [modalMode, setModalMode] = useState<ModalMode>(null);
   const [editing, setEditing] = useState<Assignment | null>(null);
   const [saving, setSaving] = useState(false);
@@ -88,13 +84,13 @@ export default function AdminAssignments() {
           topicId: values.topicId,
           note: values.note,
         });
-        message.success('已新增分配');
+        message.success(t('common.created'));
       } else if (modalMode === 'edit' && editing) {
         await adminApi.assignments.update(editing.id, {
           topicId: values.topicId,
           note: values.note ?? null,
         });
-        message.success('已更新');
+        message.success(t('common.updated'));
       }
       setModalMode(null);
       load();
@@ -108,7 +104,7 @@ export default function AdminAssignments() {
   const remove = async (id: number) => {
     try {
       await adminApi.assignments.remove(id);
-      message.success('已取消分配');
+      message.success(t('common.deleted'));
       load();
     } catch (err) {
       message.error((err as Error).message);
@@ -118,57 +114,50 @@ export default function AdminAssignments() {
   return (
     <div className="page-container">
       <Card
-        title="选题结果管理"
+        title={t('adminAssignments.title')}
         extra={
           <Space>
-            <Button onClick={load}>刷新</Button>
+            <Button onClick={load}>{t('common.refresh')}</Button>
             <Button type="primary" icon={<PlusOutlined />} onClick={openCreate}>
-              新增分配
+              {t('adminAssignments.create')}
             </Button>
           </Space>
         }
       >
-        <p style={{ color: '#888' }}>
-          管理员可在此修正选题数据（改派 / 取消 / 新增），<b>系统锁定后仍可操作</b>。
-        </p>
+        <p style={{ color: '#888' }}>{t('adminAssignments.hint')}</p>
         <Table
           rowKey="id"
           loading={loading}
           dataSource={data.items}
-          pagination={{
-            current: data.page,
-            pageSize: 10,
-            total: data.total,
-            onChange: setPage,
-          }}
+          pagination={{ current: data.page, pageSize: 10, total: data.total, onChange: setPage }}
           columns={[
-            { title: '学生', render: (_: unknown, a: Assignment) => a.student?.name ?? '-' },
-            { title: '课题', render: (_: unknown, a: Assignment) => a.topic?.title ?? '-' },
-            { title: '指导教师', render: (_: unknown, a: Assignment) => a.topic?.teacher?.name ?? '-' },
+            { title: t('adminAssignments.colStudent'), render: (_: unknown, a: Assignment) => a.student?.name ?? '-' },
+            { title: t('adminAssignments.colTopic'), render: (_: unknown, a: Assignment) => a.topic?.title ?? '-' },
+            { title: t('adminAssignments.colTeacher'), render: (_: unknown, a: Assignment) => a.topic?.teacher?.name ?? '-' },
             {
-              title: '方式',
+              title: t('adminAssignments.colMode'),
               dataIndex: 'method',
               render: (m: Assignment['method']) => <SelectionModeTag mode={m} />,
             },
             {
-              title: '锁定',
+              title: t('adminAssignments.colLocked'),
               dataIndex: 'locked',
               width: 70,
-              render: (l: boolean) => (l ? <Tag color="red">锁</Tag> : '-'),
+              render: (l: boolean) => (l ? <Tag color="red">{t('adminAssignments.lockYes')}</Tag> : '-'),
             },
-            { title: '备注', dataIndex: 'note', ellipsis: true, render: (n: string) => n || '-' },
-            { title: '确定时间', dataIndex: 'createdAt', render: (t: string) => new Date(t).toLocaleString() },
+            { title: t('adminAssignments.colNote'), dataIndex: 'note', ellipsis: true, render: (n: string) => n || '-' },
+            { title: t('adminAssignments.colTime'), dataIndex: 'createdAt', render: (tm: string) => new Date(tm).toLocaleString() },
             {
-              title: '操作',
+              title: t('common.action'),
               width: 140,
               render: (_: unknown, a: Assignment) => (
                 <Space size="small">
                   <Button size="small" onClick={() => openEdit(a)}>
-                    改派
+                    {t('adminAssignments.reassign')}
                   </Button>
-                  <Popconfirm title="确定取消该学生的选题？" onConfirm={() => remove(a.id)}>
+                  <Popconfirm title={t('adminAssignments.cancelConfirm')} onConfirm={() => remove(a.id)}>
                     <Button size="small" type="link" danger>
-                      取消
+                      {t('adminAssignments.cancel')}
                     </Button>
                   </Popconfirm>
                 </Space>
@@ -179,24 +168,20 @@ export default function AdminAssignments() {
       </Card>
 
       <Modal
-        title={modalMode === 'create' ? '新增分配' : '改派 / 修改备注'}
+        title={modalMode === 'create' ? t('adminAssignments.createTitle') : t('adminAssignments.editTitle')}
         open={modalMode !== null}
         onOk={submit}
         onCancel={() => setModalMode(null)}
         confirmLoading={saving}
-        okText="保存"
+        okText={t('common.save')}
         destroyOnClose
       >
         <Form form={form} layout="vertical">
           {modalMode === 'create' && (
-            <Form.Item
-              label="学生"
-              name="studentId"
-              rules={[{ required: true, message: '请选择学生' }]}
-            >
+            <Form.Item label={t('adminAssignments.fStudent')} name="studentId" rules={[{ required: true, message: t('adminAssignments.requireStudent') }]}>
               <Select
                 showSearch
-                placeholder="搜索姓名/学号"
+                placeholder={t('adminAssignments.fStudentSearch')}
                 filterOption={false}
                 onSearch={onStudentSearch}
                 options={studentOpts.map((s) => ({
@@ -206,20 +191,16 @@ export default function AdminAssignments() {
               />
             </Form.Item>
           )}
-          <Form.Item
-            label="课题"
-            name="topicId"
-            rules={[{ required: true, message: '请选择课题' }]}
-          >
+          <Form.Item label={t('adminAssignments.fTopic')} name="topicId" rules={[{ required: true, message: t('adminAssignments.requireTopic') }]}>
             <Select
               showSearch
               optionFilterProp="label"
-              placeholder="选择课题"
-              options={topics.map((t) => ({ label: t.title, value: t.id }))}
+              placeholder={t('adminAssignments.fTopicPlaceholder')}
+              options={topics.map((tp) => ({ label: tp.title, value: tp.id }))}
             />
           </Form.Item>
-          <Form.Item label="备注" name="note">
-            <Input.TextArea rows={2} maxLength={500} placeholder="可选" />
+          <Form.Item label={t('adminAssignments.fNote')} name="note">
+            <Input.TextArea rows={2} maxLength={500} placeholder={t('common.optional')} />
           </Form.Item>
         </Form>
       </Modal>

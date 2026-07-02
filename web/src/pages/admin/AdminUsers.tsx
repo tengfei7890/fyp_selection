@@ -14,11 +14,13 @@ import {
   message,
 } from 'antd';
 import { PlusOutlined } from '@ant-design/icons';
+import { useTranslation } from 'react-i18next';
 import { adminApi } from '@/api';
 import type { User, Paginated } from '@/types';
-import { Role, RoleLabels, UserStatus } from '@shared/enums';
+import { Role, UserStatus } from '@shared/enums';
 
 export default function AdminUsers() {
+  const { t } = useTranslation();
   const [data, setData] = useState<Paginated<User>>({ items: [], total: 0, page: 1, pageSize: 10 });
   const [loading, setLoading] = useState(false);
   const [page, setPage] = useState(1);
@@ -80,7 +82,7 @@ export default function AdminUsers() {
         };
         if (values.password) payload.password = values.password;
         await adminApi.updateUser(editing.id, payload);
-        message.success('用户已更新');
+        message.success(t('common.updated'));
       } else {
         await adminApi.createUser({
           username: values.username,
@@ -94,7 +96,7 @@ export default function AdminUsers() {
           gpa: values.gpa,
           grade: values.grade,
         });
-        message.success('用户已创建');
+        message.success(t('common.created'));
       }
       setOpen(false);
       load();
@@ -108,7 +110,7 @@ export default function AdminUsers() {
   const remove = async (id: number) => {
     try {
       await adminApi.deleteUser(id);
-      message.success('用户已删除');
+      message.success(t('common.deleted'));
       load();
     } catch (err) {
       message.error((err as Error).message);
@@ -120,76 +122,53 @@ export default function AdminUsers() {
   return (
     <div className="page-container">
       <Card
-        title="用户管理"
+        title={t('adminUsers.title')}
         extra={
           <Button type="primary" icon={<PlusOutlined />} onClick={openCreate}>
-            新建用户
+            {t('adminUsers.create')}
           </Button>
         }
       >
         <Space style={{ marginBottom: 16 }}>
           <Select
             allowClear
-            placeholder="按角色筛选"
+            placeholder={t('adminUsers.filterRole')}
             style={{ width: 140 }}
             value={roleFilter}
-            onChange={(v) => {
-              setRoleFilter(v);
-              setPage(1);
-            }}
-            options={Object.values(Role).map((r) => ({ label: RoleLabels[r], value: r }))}
+            onChange={(v) => { setRoleFilter(v); setPage(1); }}
+            options={Object.values(Role).map((r) => ({ label: t('role.' + r), value: r }))}
           />
           <Input.Search
             allowClear
-            placeholder="搜索用户名/姓名"
+            placeholder={t('adminUsers.searchPlaceholder')}
             style={{ width: 220 }}
-            onSearch={(v) => {
-              setQ(v);
-              setPage(1);
-            }}
+            onSearch={(v) => { setQ(v); setPage(1); }}
           />
         </Space>
         <Table
           rowKey="id"
           loading={loading}
           dataSource={data.items}
-          pagination={{
-            current: data.page,
-            pageSize: 10,
-            total: data.total,
-            onChange: setPage,
-          }}
+          pagination={{ current: data.page, pageSize: 10, total: data.total, onChange: setPage }}
           columns={[
-            { title: '用户名', dataIndex: 'username' },
-            { title: '姓名', dataIndex: 'name' },
+            { title: t('adminUsers.colUsername'), dataIndex: 'username' },
+            { title: t('adminUsers.colName'), dataIndex: 'name' },
+            { title: t('adminUsers.colRole'), dataIndex: 'role', render: (r: Role) => <Tag color="blue">{t('role.' + r)}</Tag> },
             {
-              title: '角色',
-              dataIndex: 'role',
-              render: (r: Role) => <Tag color="blue">{RoleLabels[r]}</Tag>,
-            },
-            {
-              title: '状态',
+              title: t('adminUsers.colStatus'),
               dataIndex: 'status',
-              render: (s: UserStatus) => (
-                <Tag color={s === UserStatus.ACTIVE ? 'green' : 'red'}>
-                  {s === UserStatus.ACTIVE ? '启用' : '禁用'}
-                </Tag>
-              ),
+              render: (s: UserStatus) => <Tag color={s === UserStatus.ACTIVE ? 'green' : 'red'}>{t('userStatus.' + s)}</Tag>,
             },
-            { title: '专业', render: (_: unknown, u: User) => u.studentProfile?.major ?? '-' },
-            { title: '创建时间', dataIndex: 'createdAt', render: (t: string) => new Date(t).toLocaleDateString() },
+            { title: t('adminUsers.colMajor'), render: (_: unknown, u: User) => u.studentProfile?.major ?? '-' },
+            { title: t('adminUsers.colCreated'), dataIndex: 'createdAt', render: (tm: string) => new Date(tm).toLocaleDateString() },
             {
-              title: '操作',
+              title: t('common.action'),
               width: 140,
               render: (_: unknown, u: User) => (
                 <Space size="small">
-                  <Button size="small" onClick={() => openEdit(u)}>
-                    编辑
-                  </Button>
-                  <Popconfirm title="确定删除该用户？" onConfirm={() => remove(u.id)}>
-                    <Button size="small" type="link" danger>
-                      删除
-                    </Button>
+                  <Button size="small" onClick={() => openEdit(u)}>{t('common.edit')}</Button>
+                  <Popconfirm title={t('adminUsers.deleteConfirm')} onConfirm={() => remove(u.id)}>
+                    <Button size="small" type="link" danger>{t('common.delete')}</Button>
                   </Popconfirm>
                 </Space>
               ),
@@ -199,75 +178,58 @@ export default function AdminUsers() {
       </Card>
 
       <Modal
-        title={editing ? '编辑用户' : '新建用户'}
+        title={editing ? t('adminUsers.editTitle') : t('adminUsers.createTitle')}
         open={open}
         onOk={submit}
         onCancel={() => setOpen(false)}
         confirmLoading={saving}
         width={560}
-        okText="保存"
+        okText={t('common.save')}
         destroyOnClose
       >
         <Form form={form} layout="vertical">
-          <Form.Item label="用户名" name="username" rules={editing ? [] : [{ required: true, message: '请输入用户名' }]}>
+          <Form.Item label={t('adminUsers.fUsername')} name="username" rules={editing ? [] : [{ required: true, message: t('adminUsers.requireUsername') }]}>
             <Input disabled={!!editing} />
           </Form.Item>
-          <Form.Item
-            label={editing ? '重置密码（留空则不改）' : '密码'}
-            name="password"
-            rules={editing ? [] : [{ required: true, min: 6, message: '至少 6 位' }]}
-          >
+          <Form.Item label={editing ? t('adminUsers.fPasswordEdit') : t('adminUsers.fPassword')} name="password" rules={editing ? [] : [{ required: true, min: 6, message: t('adminUsers.requirePassword') }]}>
             <Input.Password />
           </Form.Item>
-          <Form.Item label="姓名" name="name" rules={[{ required: true, message: '请输入姓名' }]}>
+          <Form.Item label={t('adminUsers.fName')} name="name" rules={[{ required: true, message: t('adminUsers.requireName') }]}>
             <Input />
           </Form.Item>
           <Space wrap>
-            <Form.Item label="角色" name="role" rules={[{ required: true }]} style={{ width: 140 }}>
-              <Select options={Object.values(Role).map((r) => ({ label: RoleLabels[r], value: r }))} />
+            <Form.Item label={t('adminUsers.fRole')} name="role" rules={[{ required: true }]} style={{ width: 140 }}>
+              <Select options={Object.values(Role).map((r) => ({ label: t('role.' + r), value: r }))} />
             </Form.Item>
             {editing && (
-              <Form.Item label="状态" name="status" style={{ width: 140 }}>
-                <Select
-                  options={[
-                    { label: '启用', value: UserStatus.ACTIVE },
-                    { label: '禁用', value: UserStatus.DISABLED },
-                  ]}
-                />
+              <Form.Item label={t('adminUsers.fStatus')} name="status" style={{ width: 140 }}>
+                <Select options={[{ label: t('userStatus.ACTIVE'), value: UserStatus.ACTIVE }, { label: t('userStatus.DISABLED'), value: UserStatus.DISABLED }]} />
               </Form.Item>
             )}
           </Space>
           <Space wrap>
-            <Form.Item label="邮箱" name="email" style={{ width: 240 }}>
+            <Form.Item label={t('adminUsers.fEmail')} name="email" style={{ width: 240 }}>
               <Input />
             </Form.Item>
-            <Form.Item label="电话" name="phone" style={{ width: 200 }}>
+            <Form.Item label={t('adminUsers.fPhone')} name="phone" style={{ width: 200 }}>
               <Input />
             </Form.Item>
           </Space>
-
-          {(watchingRole === Role.STUDENT || (editing?.studentProfile && watchingRole === Role.STUDENT)) && (
-            <>
-              <Space wrap>
-                <Form.Item
-                  label="学号"
-                  name="studentNo"
-                  rules={editing ? [] : [{ required: true, message: '请输入学号' }]}
-                  style={{ width: 160 }}
-                >
-                  <Input />
-                </Form.Item>
-                <Form.Item label="专业" name="major" style={{ width: 200 }}>
-                  <Input />
-                </Form.Item>
-                <Form.Item label="年级" name="grade" style={{ width: 120 }}>
-                  <Input />
-                </Form.Item>
-                <Form.Item label="GPA" name="gpa" style={{ width: 120 }}>
-                  <InputNumber min={0} max={5} step={0.1} style={{ width: '100%' }} />
-                </Form.Item>
-              </Space>
-            </>
+          {watchingRole === Role.STUDENT && (
+            <Space wrap>
+              <Form.Item label={t('adminUsers.fStudentNo')} name="studentNo" rules={editing ? [] : [{ required: true, message: t('adminUsers.requireStudentNo') }]} style={{ width: 160 }}>
+                <Input />
+              </Form.Item>
+              <Form.Item label={t('adminUsers.fMajor')} name="major" style={{ width: 200 }}>
+                <Input />
+              </Form.Item>
+              <Form.Item label={t('profile.grade')} name="grade" style={{ width: 120 }}>
+                <Input />
+              </Form.Item>
+              <Form.Item label={t('profile.gpa')} name="gpa" style={{ width: 120 }}>
+                <InputNumber min={0} max={5} step={0.1} style={{ width: '100%' }} />
+              </Form.Item>
+            </Space>
           )}
         </Form>
       </Modal>

@@ -1,21 +1,21 @@
 import { useEffect, useState } from 'react';
 import { Card, Form, Switch, Select, Button, Alert, Space, message, Spin } from 'antd';
+import { useTranslation } from 'react-i18next';
 import { adminApi } from '@/api';
 import type { SystemSettings } from '@/types';
-import { SystemPhase, SystemPhaseLabels } from '@shared/enums';
+import { SystemPhase } from '@shared/enums';
 
 export default function AdminSettings() {
+  const { t } = useTranslation();
   const [settings, setSettings] = useState<SystemSettings | null>(null);
   const [saving, setSaving] = useState(false);
   const [form] = Form.useForm();
 
   useEffect(() => {
-    adminApi
-      .getSettings()
-      .then((s) => {
-        setSettings(s);
-        form.setFieldsValue({ isLocked: s.isLocked, phase: s.phase });
-      });
+    adminApi.getSettings().then((s) => {
+      setSettings(s);
+      form.setFieldsValue({ isLocked: s.isLocked, phase: s.phase });
+    });
   }, [form]);
 
   const save = async () => {
@@ -27,7 +27,7 @@ export default function AdminSettings() {
         phase: values.phase,
       });
       setSettings(updated);
-      message.success('系统设置已保存');
+      message.success(t('common.updated'));
     } catch (err) {
       message.error((err as Error).message);
     } finally {
@@ -39,29 +39,27 @@ export default function AdminSettings() {
 
   return (
     <div className="page-container">
-      <Card title="系统设置" style={{ maxWidth: 640 }}>
-        <Alert
-          style={{ marginBottom: 24 }}
-          type="warning"
-          showIcon
-          message="锁定系统后，学生与教师的写操作（申请、课题增改等）将被禁止；管理员仍可修正选题数据。"
-        />
+      <Card title={t('adminSettings.title')} style={{ maxWidth: 640 }}>
+        <Alert style={{ marginBottom: 24 }} type="warning" showIcon message={t('adminSettings.warn')} />
         <Form form={form} layout="vertical">
-          <Form.Item label="当前选题阶段" name="phase">
+          <Form.Item label={t('adminSettings.phase')} name="phase">
             <Select
-              options={Object.values(SystemPhase).map((p) => ({ label: SystemPhaseLabels[p], value: p }))}
+              options={Object.values(SystemPhase).map((p) => ({ label: t('systemPhase.' + p), value: p }))}
             />
           </Form.Item>
-          <Form.Item label="锁定系统" name="isLocked" valuePropName="checked">
-            <Switch checkedChildren="已锁定" unCheckedChildren="未锁定" />
+          <Form.Item label={t('adminSettings.isLocked')} name="isLocked" valuePropName="checked">
+            <Switch
+              checkedChildren={t('adminSettings.locked')}
+              unCheckedChildren={t('adminSettings.unlocked')}
+            />
           </Form.Item>
           <Form.Item>
             <Space>
               <Button type="primary" onClick={save} loading={saving}>
-                保存设置
+                {t('adminSettings.save')}
               </Button>
               <span style={{ color: '#888' }}>
-                上次更新：{new Date(settings.updatedAt).toLocaleString()}
+                {t('adminSettings.lastUpdated', { time: new Date(settings.updatedAt).toLocaleString() })}
               </span>
             </Space>
           </Form.Item>

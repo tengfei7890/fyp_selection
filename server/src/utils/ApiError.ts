@@ -1,12 +1,15 @@
-/** 业务错误：携带 HTTP 状态码，被统一错误中间件识别。 */
+/** 业务错误：携带 HTTP 状态码（与可选 code），被统一错误中间件识别。 */
 export class ApiError extends Error {
+  code?: string;
   constructor(
     public statusCode: number,
     message: string,
+    code?: string,
     public details?: unknown,
   ) {
     super(message);
     this.name = 'ApiError';
+    if (code) this.code = code;
   }
 }
 

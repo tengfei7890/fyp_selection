@@ -117,17 +117,17 @@ export async function getById(req: Request, res: Response) {
     where: { id },
     include: topicInclude,
   });
-  if (!topic) throw new ApiError(404, '课题不存在');
+  if (!topic) throw new ApiError(404, '课题不存在', 'NOT_FOUND');
 
   // 权限：教师只能看自己的；学生只能看开放/选题中的
   if (req.user!.role === Role.TEACHER && topic.teacherId !== req.user!.id) {
-    throw new ApiError(403, '无权查看该课题');
+    throw new ApiError(403, '无权查看该课题', 'FORBIDDEN');
   }
   if (
     req.user!.role === Role.STUDENT &&
     !([TopicStatus.OPEN, TopicStatus.SELECTING] as TopicStatus[]).includes(topic.status)
   ) {
-    throw new ApiError(404, '课题不存在');
+    throw new ApiError(404, '课题不存在', 'NOT_FOUND');
   }
 
   res.json(topic);
@@ -243,10 +243,10 @@ async function ensureOwnTopic(topicId: number, userId: number, role: Role) {
     where: { id: topicId },
     select: { teacherId: true },
   });
-  if (!topic) throw new ApiError(404, '课题不存在');
+  if (!topic) throw new ApiError(404, '课题不存在', 'NOT_FOUND');
   // 管理员可操作任意课题；教师仅限自己创建的
   if (role !== Role.ADMIN && topic.teacherId !== userId) {
-    throw new ApiError(403, '无权操作该课题');
+    throw new ApiError(403, '无权操作该课题', 'TOPIC_NOT_OWNED');
   }
 }
 

@@ -7,7 +7,7 @@ import type { Role } from '@shared/enums';
 export const authenticate: RequestHandler = (req, _res, next) => {
   const header = req.headers.authorization;
   if (!header || !header.startsWith('Bearer ')) {
-    return next(new ApiError(401, '未登录或缺少令牌'));
+    return next(new ApiError(401, '未登录或缺少令牌', 'UNAUTHENTICATED'));
   }
   try {
     const payload = verifyToken(header.slice('Bearer '.length).trim());
@@ -19,7 +19,7 @@ export const authenticate: RequestHandler = (req, _res, next) => {
     };
     next();
   } catch {
-    next(new ApiError(401, '登录已过期，请重新登录'));
+    next(new ApiError(401, '登录已过期，请重新登录', 'UNAUTHENTICATED'));
   }
 };
 
@@ -27,9 +27,9 @@ export const authenticate: RequestHandler = (req, _res, next) => {
 export const requireRole =
   (...roles: Role[]): RequestHandler =>
   (req, _res, next) => {
-    if (!req.user) return next(new ApiError(401, '未登录'));
+    if (!req.user) return next(new ApiError(401, '未登录', 'UNAUTHENTICATED'));
     if (!roles.includes(req.user.role)) {
-      return next(new ApiError(403, '权限不足，无法访问该资源'));
+      return next(new ApiError(403, '权限不足，无法访问该资源', 'FORBIDDEN'));
     }
     next();
   };

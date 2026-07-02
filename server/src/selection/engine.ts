@@ -38,7 +38,7 @@ export async function assignStudent(tx: Tx, params: AssignParams): Promise<void>
   // 一人一题：若已分配则拒绝
   const existing = await tx.assignment.findUnique({ where: { studentId } });
   if (existing) {
-    throw new ApiError(409, '该学生已有选题，无法重复分配');
+    throw new ApiError(409, '该学生已有选题，无法重复分配', 'ALREADY_ASSIGNED');
   }
 
   await tx.assignment.create({
@@ -66,7 +66,7 @@ async function eligibleApplicants(tx: Tx, topicId: number) {
     where: { id: topicId },
     include: { requirements: true },
   });
-  if (!topic) throw new ApiError(404, '课题不存在');
+  if (!topic) throw new ApiError(404, '课题不存在', 'NOT_FOUND');
 
   const apps = await tx.application.findMany({
     where: { topicId, status: ApplicationStatus.PENDING },
@@ -102,8 +102,8 @@ export async function runRandom(topicId: number, actorId: number) {
     const { topic, eligible } = await eligibleApplicants(tx, topicId);
     const assignedCount = await tx.assignment.count({ where: { topicId } });
     const remaining = topic.capacity - assignedCount;
-    if (remaining <= 0) throw new ApiError(400, '该课题已满员');
-    if (eligible.length === 0) throw new ApiError(400, '没有符合条件的申请人');
+    if (remaining <= 0) throw new ApiError(400, '该课题已满员', 'TOPIC_FULL');
+    if (eligible.length === 0) throw new ApiError(400, '没有符合条件的申请人', 'NO_ELIGIBLE_APPLICANTS');
 
     const picked = shuffle(eligible).slice(0, remaining);
     for (const a of picked) {
@@ -140,7 +140,7 @@ export async function runRangeRandom(
     const { topic, eligible } = await eligibleApplicants(tx, topicId);
     const assignedCount = await tx.assignment.count({ where: { topicId } });
     const remaining = topic.capacity - assignedCount;
-    if (remaining <= 0) throw new ApiError(400, '该课题已满员');
+    if (remaining <= 0) throw new ApiError(400, '该课题已满员', 'TOPIC_FULL');
 
     let pool = eligible;
     if (criteria.gpaMin != null) {
@@ -159,7 +159,7 @@ export async function runRangeRandom(
       );
     }
     if (pool.length === 0) {
-      throw new ApiError(400, '指定范围内没有符合条件的申请人');
+      throw new ApiError(400, '指定范围内没有符合条件的申请人', 'NO_ELIGIBLE_APPLICANTS');
     }
 
     const picked = shuffle(pool).slice(0, remaining);
@@ -195,10 +195,10 @@ export async function directAssign(
 ) {
   return prisma.$transaction(async (tx) => {
     const topic = await tx.topic.findUnique({ where: { id: topicId } });
-    if (!topic) throw new ApiError(404, '课题不存在');
+    if (!topic) throw new ApiError(404, '课题不存在', 'NOT_FOUND');
     const assignedCount = await tx.assignment.count({ where: { topicId } });
     const remaining = topic.capacity - assignedCount;
-    if (remaining <= 0) throw new ApiError(400, '该课题已满员');
+    if (remaining <= 0) throw new ApiError(400, '该课题已满员', 'TOPIC_FULL');
 
     const assignedIds: number[] = [];
     let created = 0;
@@ -235,15 +235,15 @@ export async function mutualAccept(applicationId: number, actorId: number) {
       where: { id: applicationId },
       include: { topic: true },
     });
-    if (!app) throw new ApiError(404, '申请不存在');
+    if (!app) throw new ApiError(404, '申请不存在', 'NOT_FOUND');
     if (app.status !== ApplicationStatus.PENDING) {
-      throw new ApiError(400, '该申请已处理');
+      throw new ApiError(400, '该申请已处理', 'APPLICATION_PROCESSED');
     }
     const assignedCount = await tx.assignment.count({
       where: { topicId: app.topicId },
     });
     if (assignedCount >= app.topic.capacity) {
-      throw new ApiError(400, '该课题已满员');
+      throw new ApiError(400, '该课题已满员', 'TOPIC_FULL');
     }
 
     await assignStudent(tx, {
@@ -268,9 +268,9 @@ export async function mutualReject(applicationId: number) {
   const app = await prisma.application.findUnique({
     where: { id: applicationId },
   });
-  if (!app) throw new ApiError(404, '申请不存在');
+  if (!app) throw new ApiError(404, '申请不存在', 'NOT_FOUND');
   if (app.status !== ApplicationStatus.PENDING) {
-    throw new ApiError(400, '该申请已处理');
+    throw new ApiError(400, '该申请已处理', 'APPLICATION_PROCESSED');
   }
   await prisma.application.update({
     where: { id: applicationId },

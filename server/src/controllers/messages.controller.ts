@@ -12,10 +12,10 @@ async function assertCanMessage(senderId: number, receiverId: number) {
     prisma.user.findUnique({ where: { id: senderId }, select: { role: true } }),
     prisma.user.findUnique({ where: { id: receiverId }, select: userSelect }),
   ]);
-  if (!receiver) throw new ApiError(404, '收件人不存在');
+  if (!receiver) throw new ApiError(404, '收件人不存在', 'NOT_FOUND');
   const roles = new Set([sender!.role, receiver.role]);
   if (!(roles.has(Role.TEACHER) && roles.has(Role.STUDENT))) {
-    throw new ApiError(403, '仅支持教师与学生之间互发消息');
+    throw new ApiError(403, '仅支持教师与学生之间互发消息', 'FORBIDDEN');
   }
   return receiver;
 }

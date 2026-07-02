@@ -58,7 +58,7 @@ export async function getById(req: Request, res: Response) {
       },
     },
   });
-  if (!user) throw new ApiError(404, '用户不存在');
+  if (!user) throw new ApiError(404, '用户不存在', 'NOT_FOUND');
   res.json(publicUser(user));
 }
 

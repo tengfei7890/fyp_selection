@@ -25,7 +25,7 @@ export async function create(req: Request, res: Response) {
   const studentId = req.user!.id;
 
   const topic = await prisma.topic.findUnique({ where: { id: topicId } });
-  if (!topic) throw new ApiError(404, '课题不存在');
+  if (!topic) throw new ApiError(404, '课题不存在', 'NOT_FOUND');
 
   const favorite = await prisma.favorite
     .create({ data: { studentId, topicId } })

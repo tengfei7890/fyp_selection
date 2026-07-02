@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useState } from 'react';
 import { Layout, Menu, Button, Typography, Space, Tag, Badge } from 'antd';
+import type { TFunction } from 'i18next';
 import {
   SearchOutlined,
   StarOutlined,
@@ -17,49 +18,48 @@ import {
   FileSearchOutlined,
 } from '@ant-design/icons';
 import { Outlet, useLocation, useNavigate } from 'react-router-dom';
+import { useTranslation } from 'react-i18next';
 import { useAuth } from '@/contexts/AuthContext';
 import { messageApi, notificationApi } from '@/api';
-import { Role, RoleLabels } from '@shared/enums';
+import { Role } from '@shared/enums';
 import type { ItemType } from 'antd/es/menu/interface';
+import LanguageSwitcher from '@/components/LanguageSwitcher';
 
 const { Header, Sider, Content } = Layout;
 
-function msgLabel(unread: number) {
-  // 文字作为普通文本节点以继承菜单配色；未读数用独立徽标，避免 Badge 包裹导致颜色失效
+function msgLabel(unread: number, t: TFunction) {
   return (
     <span>
-      消息
-      {unread > 0 && (
-        <Badge count={unread} size="small" style={{ marginLeft: 6 }} />
-      )}
+      {t('nav.messages')}
+      {unread > 0 && <Badge count={unread} size="small" style={{ marginLeft: 6 }} />}
     </span>
   );
 }
 
-function menuItems(role: Role, unread: number): ItemType[] {
+function menuItems(role: Role, unread: number, t: TFunction): ItemType[] {
   switch (role) {
     case Role.STUDENT:
       return [
-        { key: '/student', icon: <SearchOutlined />, label: '浏览课题' },
-        { key: '/student/favorites', icon: <StarOutlined />, label: '我的收藏' },
-        { key: '/student/applications', icon: <FileTextOutlined />, label: '我的申请' },
-        { key: '/student/messages', icon: <MessageOutlined />, label: msgLabel(unread) },
-        { key: '/student/profile', icon: <UserOutlined />, label: '个人档案' },
+        { key: '/student', icon: <SearchOutlined />, label: t('nav.browse') },
+        { key: '/student/favorites', icon: <StarOutlined />, label: t('nav.favorites') },
+        { key: '/student/applications', icon: <FileTextOutlined />, label: t('nav.applications') },
+        { key: '/student/messages', icon: <MessageOutlined />, label: msgLabel(unread, t) },
+        { key: '/student/profile', icon: <UserOutlined />, label: t('nav.profile') },
       ];
     case Role.TEACHER:
       return [
-        { key: '/teacher', icon: <BookOutlined />, label: '我的课题' },
-        { key: '/teacher/applications', icon: <SolutionOutlined />, label: '申请管理' },
-        { key: '/teacher/messages', icon: <MessageOutlined />, label: msgLabel(unread) },
+        { key: '/teacher', icon: <BookOutlined />, label: t('nav.myTopics') },
+        { key: '/teacher/applications', icon: <SolutionOutlined />, label: t('nav.teacherApps') },
+        { key: '/teacher/messages', icon: <MessageOutlined />, label: msgLabel(unread, t) },
       ];
     case Role.ADMIN:
       return [
-        { key: '/admin', icon: <DashboardOutlined />, label: '系统概览' },
-        { key: '/admin/users', icon: <TeamOutlined />, label: '用户管理' },
-        { key: '/admin/topics', icon: <BookOutlined />, label: '课题总览' },
-        { key: '/admin/assignments', icon: <CheckCircleOutlined />, label: '选题结果' },
-        { key: '/admin/audit', icon: <FileSearchOutlined />, label: '审计日志' },
-        { key: '/admin/settings', icon: <SettingOutlined />, label: '系统设置' },
+        { key: '/admin', icon: <DashboardOutlined />, label: t('nav.dashboard') },
+        { key: '/admin/users', icon: <TeamOutlined />, label: t('nav.users') },
+        { key: '/admin/topics', icon: <BookOutlined />, label: t('nav.topics') },
+        { key: '/admin/assignments', icon: <CheckCircleOutlined />, label: t('nav.assignments') },
+        { key: '/admin/audit', icon: <FileSearchOutlined />, label: t('nav.audit') },
+        { key: '/admin/settings', icon: <SettingOutlined />, label: t('nav.settings') },
       ];
     default:
       return [];
@@ -68,12 +68,13 @@ function menuItems(role: Role, unread: number): ItemType[] {
 
 export default function RoleLayout() {
   const { user, logout } = useAuth();
+  const { t } = useTranslation();
   const navigate = useNavigate();
   const location = useLocation();
   const [unread, setUnread] = useState(0);
   const [notifUnread, setNotifUnread] = useState(0);
+  const [collapsed, setCollapsed] = useState(false);
 
-  // 教师/学生：每 30s 轮询未读数（管理员无站内信）
   const canMsg = user?.role === Role.TEACHER || user?.role === Role.STUDENT;
   useEffect(() => {
     if (!canMsg) return;
@@ -83,7 +84,6 @@ export default function RoleLayout() {
     return () => clearInterval(id);
   }, [canMsg]);
 
-  // 所有用户：每 30s 轮询通知未读数
   useEffect(() => {
     const tick = () => notificationApi.unreadCount().then((r) => setNotifUnread(r.count)).catch(() => undefined);
     tick();
@@ -91,17 +91,18 @@ export default function RoleLayout() {
     return () => clearInterval(id);
   }, []);
 
-  const [collapsed, setCollapsed] = useState(false);
-  const items = useMemo(() => menuItems(user!.role, unread), [user!.role, unread]);
+  const items = useMemo(
+    () => menuItems(user!.role, unread, t),
+    [user!.role, unread, t],
+  );
 
   const headerTitle =
     user!.role === Role.ADMIN
-      ? '管理中心'
+      ? t('nav.titleAdmin')
       : user!.role === Role.TEACHER
-        ? '教师工作台'
-        : '学生中心';
+        ? t('nav.titleTeacher')
+        : t('nav.titleStudent');
 
-  // 选中态：取当前路径中与菜单 key 的最长前缀匹配
   const selectedKey =
     items
       ?.map((i) => (i as { key: string }).key)
@@ -131,7 +132,7 @@ export default function RoleLayout() {
             overflow: 'hidden',
           }}
         >
-          {collapsed ? '毕设' : '毕业设计选题系统'}
+          {collapsed ? t('nav.brandShort') : t('nav.brand')}
         </div>
         <Menu
           theme="dark"
@@ -165,6 +166,7 @@ export default function RoleLayout() {
             {headerTitle}
           </Typography.Title>
           <Space size="middle" style={{ flexShrink: 0 }}>
+            <LanguageSwitcher />
             <Badge count={notifUnread} size="small">
               <Button
                 type="text"
@@ -173,7 +175,7 @@ export default function RoleLayout() {
               />
             </Badge>
             <span style={{ whiteSpace: 'nowrap' }}>{user?.name}</span>
-            <Tag color="blue">{user ? RoleLabels[user.role] : ''}</Tag>
+            <Tag color="blue">{user ? t('role.' + user.role) : ''}</Tag>
             <Button
               icon={<LogoutOutlined />}
               onClick={() => {
@@ -181,7 +183,7 @@ export default function RoleLayout() {
                 navigate('/login');
               }}
             >
-              退出
+              {t('nav.logout')}
             </Button>
           </Space>
         </Header>

@@ -1,11 +1,13 @@
 import { useEffect, useState, useCallback } from 'react';
 import { Card, Table, Button, Space, Popconfirm, message } from 'antd';
 import { Link } from 'react-router-dom';
+import { useTranslation } from 'react-i18next';
 import { favoriteApi } from '@/api';
 import type { Favorite } from '@/types';
 import { SelectionModeTag } from '@/components/StatusTags';
 
 export default function Favorites() {
+  const { t } = useTranslation();
   const [items, setItems] = useState<Favorite[]>([]);
   const [loading, setLoading] = useState(false);
 
@@ -26,7 +28,7 @@ export default function Favorites() {
     try {
       await favoriteApi.remove(topicId);
       setItems((prev) => prev.filter((f) => f.topicId !== topicId));
-      message.success('已取消收藏');
+      message.success(t('common.removed'));
     } catch (err) {
       message.error((err as Error).message);
     }
@@ -34,7 +36,7 @@ export default function Favorites() {
 
   return (
     <div className="page-container">
-      <Card title="我的收藏" extra={<Button onClick={load}>刷新</Button>}>
+      <Card title={t('favorites.title')} extra={<Button onClick={load}>{t('common.refresh')}</Button>}>
         <Table
           rowKey="topicId"
           loading={loading}
@@ -42,26 +44,26 @@ export default function Favorites() {
           pagination={{ pageSize: 10 }}
           columns={[
             {
-              title: '课题标题',
+              title: t('favorites.colTitle'),
               render: (_: unknown, r: Favorite) => (
                 <Link to={`/student/topics/${r.topicId}`}>{r.topic.title}</Link>
               ),
             },
-            { title: '指导教师', render: (_: unknown, r: Favorite) => r.topic.teacher?.name },
+            { title: t('favorites.colTeacher'), render: (_: unknown, r: Favorite) => r.topic.teacher?.name },
             {
-              title: '选题模式',
+              title: t('favorites.colMode'),
               dataIndex: ['topic', 'selectionMode'],
               render: (m: Favorite['topic']['selectionMode']) => <SelectionModeTag mode={m} />,
             },
-            { title: '收藏时间', dataIndex: 'createdAt', render: (t: string) => new Date(t).toLocaleString() },
+            { title: t('favorites.colTime'), dataIndex: 'createdAt', render: (tm: string) => new Date(tm).toLocaleString() },
             {
-              title: '操作',
+              title: t('common.action'),
               render: (_: unknown, r: Favorite) => (
                 <Space>
-                  <Link to={`/student/topics/${r.topicId}`}>查看</Link>
-                  <Popconfirm title="确定取消收藏？" onConfirm={() => remove(r.topicId)}>
+                  <Link to={`/student/topics/${r.topicId}`}>{t('common.view')}</Link>
+                  <Popconfirm title={t('favorites.removeConfirm')} onConfirm={() => remove(r.topicId)}>
                     <Button type="link" danger size="small">
-                      取消收藏
+                      {t('favorites.remove')}
                     </Button>
                   </Popconfirm>
                 </Space>

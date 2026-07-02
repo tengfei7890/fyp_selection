@@ -137,6 +137,7 @@ export interface NotificationItem {
   userId: number;
   type: NotificationType;
   content: string;
+  params?: Record<string, unknown> | null;
   refType?: string | null;
   refId?: number | null;
   readAt?: string | null;

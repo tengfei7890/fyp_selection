@@ -12,7 +12,7 @@ export const rejectIfLocked: RequestHandler = async (req, _res, next) => {
     if (req.user?.role === Role.ADMIN) return next();
     const setting = await prisma.systemSetting.findUnique({ where: { id: 1 } });
     if (setting?.isLocked) {
-      return next(new ApiError(403, '系统已锁定，当前阶段不可修改'));
+      return next(new ApiError(403, '系统已锁定，当前阶段不可修改', 'SYSTEM_LOCKED'));
     }
     next();
   } catch (err) {

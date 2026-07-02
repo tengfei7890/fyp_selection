@@ -1,19 +1,12 @@
 import { useEffect, useState, useCallback } from 'react';
 import { Card, Button, List, Tag, Empty, Skeleton, message } from 'antd';
 import { CheckOutlined } from '@ant-design/icons';
+import { useTranslation } from 'react-i18next';
 import { notificationApi } from '@/api';
 import type { NotificationItem } from '@/types';
-import { NotificationTypeLabels, NotificationType } from '@shared/enums';
-
-const typeColor: Record<NotificationType, string> = {
-  [NotificationType.APPLICATION_ACCEPTED]: 'green',
-  [NotificationType.APPLICATION_REJECTED]: 'red',
-  [NotificationType.ASSIGNMENT_CREATED]: 'blue',
-  [NotificationType.ASSIGNMENT_CLEARED]: 'orange',
-  [NotificationType.NEW_APPLICATION]: 'purple',
-};
 
 export default function Notifications() {
+  const { t } = useTranslation();
   const [items, setItems] = useState<NotificationItem[]>([]);
   const [loading, setLoading] = useState(true);
 
@@ -30,46 +23,48 @@ export default function Notifications() {
 
   useEffect(() => {
     load();
-    // 打开通知页即在后台标记全部已读（下次轮询徽标清零）
     notificationApi.markAllRead().catch(() => undefined);
   }, [load]);
 
   const markAll = async () => {
     try {
       await notificationApi.markAllRead();
-      message.success('已全部标记为已读');
+      message.success(t('notifications.markedAll'));
       load();
     } catch (err) {
       message.error((err as Error).message);
     }
   };
 
+  const renderText = (n: NotificationItem) =>
+    n.params
+      ? t('notification.' + n.type, {
+          topic: (n.params.topicTitle as string) ?? '',
+          student: (n.params.studentName as string) ?? '',
+        })
+      : n.content;
+
   return (
     <div className="page-container">
       <Card
-        title="通知"
+        title={t('notifications.title')}
         extra={
           <Button icon={<CheckOutlined />} onClick={markAll}>
-            全部已读
+            {t('notifications.markAll')}
           </Button>
         }
       >
         <Skeleton loading={loading && items.length === 0} active>
           <List
             dataSource={items}
-            locale={{ emptyText: <Empty description="暂无通知" /> }}
+            locale={{ emptyText: <Empty description={t('notifications.empty')} /> }}
             renderItem={(n) => (
               <List.Item>
                 <List.Item.Meta
-                  title={
-                    <span>
-                      <Tag color={typeColor[n.type]}>{NotificationTypeLabels[n.type]}</Tag>
-                      {!n.readAt && <Tag color="processing">新</Tag>}
-                    </span>
-                  }
+                  title={!n.readAt ? <Tag color="processing">{t('notifications.new')}</Tag> : null}
                   description={
                     <span>
-                      <div>{n.content}</div>
+                      <div>{renderText(n)}</div>
                       <span style={{ color: '#999', fontSize: 12 }}>
                         {new Date(n.createdAt).toLocaleString()}
                       </span>

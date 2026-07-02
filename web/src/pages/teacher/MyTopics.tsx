@@ -1,14 +1,8 @@
 import { useEffect, useState, useCallback } from 'react';
-import {
-  Card,
-  Table,
-  Button,
-  Space,
-  Popconfirm,
-  message,
-} from 'antd';
+import { Card, Table, Button, Space, Popconfirm, message } from 'antd';
 import { PlusOutlined } from '@ant-design/icons';
 import { useNavigate } from 'react-router-dom';
+import { useTranslation } from 'react-i18next';
 import { topicApi, skillApi } from '@/api';
 import type { Topic, Skill, Paginated } from '@/types';
 import TopicFormModal from '@/components/TopicFormModal';
@@ -16,6 +10,7 @@ import { TopicStatusTag, SelectionModeTag } from '@/components/StatusTags';
 import { TopicStatus } from '@shared/enums';
 
 export default function MyTopics() {
+  const { t } = useTranslation();
   const navigate = useNavigate();
   const [data, setData] = useState<Paginated<Topic>>({ items: [], total: 0, page: 1, pageSize: 10 });
   const [skills, setSkills] = useState<Skill[]>([]);
@@ -45,16 +40,15 @@ export default function MyTopics() {
     setEditing(null);
     setOpen(true);
   };
-
-  const openEdit = (t: Topic) => {
-    setEditing(t);
+  const openEdit = (tp: Topic) => {
+    setEditing(tp);
     setOpen(true);
   };
 
-  const changeStatus = async (t: Topic, status: TopicStatus) => {
+  const changeStatus = async (tp: Topic, status: TopicStatus) => {
     try {
-      await topicApi.updateStatus(t.id, status);
-      message.success('状态已更新');
+      await topicApi.updateStatus(tp.id, status);
+      message.success(t('common.updated'));
       load();
     } catch (err) {
       message.error((err as Error).message);
@@ -64,7 +58,7 @@ export default function MyTopics() {
   const remove = async (id: number) => {
     try {
       await topicApi.remove(id);
-      message.success('课题已删除');
+      message.success(t('common.deleted'));
       load();
     } catch (err) {
       message.error((err as Error).message);
@@ -74,10 +68,10 @@ export default function MyTopics() {
   return (
     <div className="page-container">
       <Card
-        title="我的课题"
+        title={t('myTopics.title')}
         extra={
           <Button type="primary" icon={<PlusOutlined />} onClick={openCreate}>
-            新建课题
+            {t('myTopics.create')}
           </Button>
         }
       >
@@ -85,61 +79,44 @@ export default function MyTopics() {
           rowKey="id"
           loading={loading}
           dataSource={data.items}
-          pagination={{
-            current: data.page,
-            pageSize: 10,
-            total: data.total,
-            onChange: setPage,
-          }}
+          pagination={{ current: data.page, pageSize: 10, total: data.total, onChange: setPage }}
           columns={[
-            { title: '课题标题', dataIndex: 'title' },
+            { title: t('myTopics.colTitle'), dataIndex: 'title' },
             {
-              title: '选题模式',
+              title: t('myTopics.colMode'),
               dataIndex: 'selectionMode',
               width: 110,
               render: (m: Topic['selectionMode']) => <SelectionModeTag mode={m} />,
             },
-            { title: '容量', dataIndex: 'capacity', width: 70 },
+            { title: t('myTopics.colCapacity'), dataIndex: 'capacity', width: 70 },
             {
-              title: '申请',
+              title: t('myTopics.colApplied'),
               width: 70,
               render: (_: unknown, r: Topic) => r._count?.applications ?? 0,
             },
             {
-              title: '状态',
+              title: t('myTopics.colStatus'),
               dataIndex: 'status',
               width: 110,
               render: (s: Topic['status']) => <TopicStatusTag status={s} />,
             },
             {
-              title: '操作',
+              title: t('common.action'),
               width: 300,
               render: (_: unknown, r: Topic) => (
                 <Space size="small" wrap>
-                  <Button size="small" onClick={() => openEdit(r)}>
-                    编辑
-                  </Button>
-                  <Button
-                    size="small"
-                    type="link"
-                    onClick={() => navigate(`/teacher/applications?topicId=${r.id}`)}
-                  >
-                    查看申请
+                  <Button size="small" onClick={() => openEdit(r)}>{t('common.edit')}</Button>
+                  <Button size="small" type="link" onClick={() => navigate(`/teacher/applications?topicId=${r.id}`)}>
+                    {t('myTopics.viewApps')}
                   </Button>
                   {r.status === TopicStatus.DRAFT && (
-                    <Button size="small" type="link" onClick={() => changeStatus(r, TopicStatus.OPEN)}>
-                      上架
-                    </Button>
+                    <Button size="small" type="link" onClick={() => changeStatus(r, TopicStatus.OPEN)}>{t('myTopics.publish')}</Button>
                   )}
                   {r.status === TopicStatus.OPEN && (
-                    <Button size="small" type="link" danger onClick={() => changeStatus(r, TopicStatus.CLOSED)}>
-                      下架
-                    </Button>
+                    <Button size="small" type="link" danger onClick={() => changeStatus(r, TopicStatus.CLOSED)}>{t('myTopics.unpublish')}</Button>
                   )}
-                  <Popconfirm title="删除课题将同时清除其申请与收藏，确定？" onConfirm={() => remove(r.id)}>
-                    <Button size="small" type="link" danger>
-                      删除
-                    </Button>
+                  <Popconfirm title={t('myTopics.deleteConfirm')} onConfirm={() => remove(r.id)}>
+                    <Button size="small" type="link" danger>{t('common.delete')}</Button>
                   </Popconfirm>
                 </Space>
               ),
@@ -148,13 +125,7 @@ export default function MyTopics() {
         />
       </Card>
 
-      <TopicFormModal
-        open={open}
-        topic={editing}
-        skills={skills}
-        onClose={() => setOpen(false)}
-        onSaved={load}
-      />
+      <TopicFormModal open={open} topic={editing} skills={skills} onClose={() => setOpen(false)} onSaved={load} />
     </div>
   );
 }

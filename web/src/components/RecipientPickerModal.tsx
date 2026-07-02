@@ -1,5 +1,6 @@
 import { useEffect, useState, useCallback } from 'react';
 import { Modal, Input, Table, Empty, message } from 'antd';
+import { useTranslation } from 'react-i18next';
 import { userApi } from '@/api';
 import { useAuth } from '@/contexts/AuthContext';
 import { Role } from '@shared/enums';
@@ -17,8 +18,8 @@ interface Props {
   onConfirm: (recipient: { id: number; name: string }) => void;
 }
 
-/** 发起新对话的收件人选择：学生选教师、教师选学生。 */
 export default function RecipientPickerModal({ open, onClose, onConfirm }: Props) {
+  const { t } = useTranslation();
   const { user } = useAuth();
   const isStudent = user?.role === Role.STUDENT;
   const [q, setQ] = useState('');
@@ -30,11 +31,9 @@ export default function RecipientPickerModal({ open, onClose, onConfirm }: Props
       setLoading(true);
       try {
         if (isStudent) {
-          const r = await userApi.searchTeachers(value);
-          setItems(r);
+          setItems(await userApi.searchTeachers(value));
         } else {
-          const r = await userApi.searchStudents(value);
-          setItems(r);
+          setItems(await userApi.searchStudents(value));
         }
       } catch (err) {
         message.error((err as Error).message);
@@ -53,16 +52,9 @@ export default function RecipientPickerModal({ open, onClose, onConfirm }: Props
   }, [open, search]);
 
   return (
-    <Modal
-      title="发起新对话"
-      open={open}
-      onCancel={onClose}
-      footer={null}
-      width={560}
-      destroyOnClose
-    >
+    <Modal title={t('messages.pickTitle')} open={open} onCancel={onClose} footer={null} width={560} destroyOnClose>
       <Input.Search
-        placeholder={isStudent ? '搜索教师姓名 / 用户名' : '搜索学生姓名 / 学号'}
+        placeholder={isStudent ? t('messages.pickSearchTeacher') : t('messages.pickSearchStudent')}
         value={q}
         onChange={(e) => setQ(e.target.value)}
         onSearch={(v) => search(v)}
@@ -76,25 +68,25 @@ export default function RecipientPickerModal({ open, onClose, onConfirm }: Props
         size="small"
         pagination={{ pageSize: 6 }}
         scroll={{ y: 280 }}
-        locale={{ emptyText: <Empty description="没有可选对象" /> }}
+        locale={{ emptyText: <Empty description={t('common.none')} /> }}
         onRow={(record) => ({
           onClick: () => onConfirm({ id: record.id, name: record.name }),
           style: { cursor: 'pointer' },
         })}
         columns={[
-          { title: isStudent ? '教师' : '学生', dataIndex: 'name' },
-          { title: '用户名', dataIndex: 'username' },
+          { title: isStudent ? t('messages.pickTeacherCol') : t('messages.pickStudentCol'), dataIndex: 'name' },
+          { title: t('messages.pickUsername'), dataIndex: 'username' },
           ...(isStudent
             ? []
             : [
                 {
-                  title: '专业',
+                  title: t('adminAssignments.colMajor'),
                   render: (_: unknown, r: Recipient) => r.studentProfile?.major ?? '-',
                 },
               ]),
         ]}
       />
-      <p style={{ color: '#888', marginTop: 8, marginBottom: 0 }}>点击任意一行即可发起对话。</p>
+      <p style={{ color: '#888', marginTop: 8, marginBottom: 0 }}>{t('messages.pickHint')}</p>
     </Modal>
   );
 }

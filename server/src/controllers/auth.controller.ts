@@ -20,10 +20,10 @@ export async function login(req: Request, res: Response) {
     },
   });
   if (!user || user.status !== UserStatus.ACTIVE) {
-    throw new ApiError(401, '账号不存在或已被禁用');
+    throw new ApiError(401, '账号不存在或已被禁用', 'INVALID_CREDENTIALS');
   }
   if (!comparePassword(password, user.passwordHash)) {
-    throw new ApiError(401, '用户名或密码错误');
+    throw new ApiError(401, '用户名或密码错误', 'INVALID_CREDENTIALS');
   }
 
   const token = signToken({
@@ -46,7 +46,7 @@ export async function me(req: Request, res: Response) {
       },
     },
   });
-  if (!user) throw new ApiError(404, '用户不存在');
+  if (!user) throw new ApiError(404, '用户不存在', 'NOT_FOUND');
 
   res.json(publicUser(user));
 }

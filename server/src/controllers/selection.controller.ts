@@ -13,9 +13,9 @@ async function assertTopicAccess(topicId: number, req: Request) {
     where: { id: topicId },
     select: { teacherId: true },
   });
-  if (!topic) throw new ApiError(404, '课题不存在');
+  if (!topic) throw new ApiError(404, '课题不存在', 'NOT_FOUND');
   if (req.user!.role === Role.TEACHER && topic.teacherId !== req.user!.id) {
-    throw new ApiError(403, '无权操作该课题');
+    throw new ApiError(403, '无权操作该课题', 'TOPIC_NOT_OWNED');
   }
 }
 
@@ -25,9 +25,9 @@ async function assertApplicationAccess(applicationId: number, req: Request) {
     where: { id: applicationId },
     include: { topic: { select: { teacherId: true } } },
   });
-  if (!app) throw new ApiError(404, '申请不存在');
+  if (!app) throw new ApiError(404, '申请不存在', 'NOT_FOUND');
   if (req.user!.role === Role.TEACHER && app.topic.teacherId !== req.user!.id) {
-    throw new ApiError(403, '无权操作该申请');
+    throw new ApiError(403, '无权操作该申请', 'FORBIDDEN');
   }
 }
 
@@ -47,7 +47,7 @@ export async function select(req: Request, res: Response) {
     where: { id: topicId },
     select: { selectionMode: true },
   });
-  if (!topic) throw new ApiError(404, '课题不存在');
+  if (!topic) throw new ApiError(404, '课题不存在', 'NOT_FOUND');
   const criteria = (req.body?.criteria ?? {}) as RangeCriteria;
 
   let result;
@@ -65,7 +65,7 @@ export async function select(req: Request, res: Response) {
       await notify(
         sid,
         NotificationType.ASSIGNMENT_CREATED,
-        `你已被确定为课题《${title}》`,
+        { topicTitle: title },
         'topic',
         topicId,
       );
@@ -94,7 +94,7 @@ export async function assignDirect(req: Request, res: Response) {
       await notify(
         sid,
         NotificationType.ASSIGNMENT_CREATED,
-        `教师已直接将你确定为课题《${title}》`,
+        { topicTitle: title },
         'topic',
         topicId,
       );
@@ -116,7 +116,7 @@ export async function clearAssignments(req: Request, res: Response) {
       await notify(
         sid,
         NotificationType.ASSIGNMENT_CLEARED,
-        `课题《${title}》的选题结果已被清空，可重新选题`,
+        { topicTitle: title },
         'topic',
         topicId,
       );
@@ -135,7 +135,7 @@ export async function accept(req: Request, res: Response) {
   await notify(
     result.studentId,
     NotificationType.APPLICATION_ACCEPTED,
-    `教师通过了你对《${title}》的申请`,
+    { topicTitle: title },
     'topic',
     result.topicId,
   );
@@ -152,7 +152,7 @@ export async function reject(req: Request, res: Response) {
   await notify(
     result.studentId,
     NotificationType.APPLICATION_REJECTED,
-    `教师拒绝了你对《${title}》的申请`,
+    { topicTitle: title },
     'topic',
     result.topicId,
   );
