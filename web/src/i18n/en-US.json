@@ -68,7 +68,7 @@
     "REJECTED": "Rejected",
     "WITHDRAWN": "Withdrawn"
   },
-  "appRejectReason": { "cascade": "Assigned to another topic", "manual": "Rejected by teacher" },
+  "appRejectReason": { "cascade": "Other topic", "manual": "Rejected" },
   "selectionMode": {
     "DIRECT": "Direct Assign",
     "MUTUAL": "Mutual",

@@ -189,7 +189,7 @@ export default function TeacherApplications() {
                   { title: t('teacherApp.colMessage'), dataIndex: 'message', ellipsis: true, render: (m: string) => m || '-' },
                   {
                     title: t('teacherApp.colStatus'),
-                    width: 120,
+                    width: 130,
                     render: (_: unknown, a: Application) => {
                       if (a.status === ApplicationStatus.REJECTED) {
                         if (a.rejectReason === 'cascade') {
